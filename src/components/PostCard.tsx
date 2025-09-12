@@ -11,6 +11,7 @@ interface PostCardProps {
   onPress: () => void;
   onLike: () => void;
   onFavorite: () => void;
+  onProfilePress?: () => void;
   onDelete?: () => void;
   showActions?: boolean;
 }
@@ -20,13 +21,19 @@ export const PostCard: React.FC<PostCardProps> = ({
   onPress,
   onLike,
   onFavorite,
+  onProfilePress,
   onDelete,
   showActions = true,
 }) => {
   return (
     <Card onPress={onPress}>
       <Row marginBottom={12}>
-        <UserAvatar name={post.author.name} avatar={post.author.avatar} size={40} />
+        <UserAvatar 
+          name={post.author.name} 
+          avatar={post.author.avatar} 
+          size={40} 
+          onPress={onProfilePress}
+        />
         <Column style={{ flex: 1, marginLeft: 12 }}>
           <Text weight="600" size={16}>{post.author.name}</Text>
           <Caption>{formatDate(post.createdAt)}</Caption>

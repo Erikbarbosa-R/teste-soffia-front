@@ -14,6 +14,7 @@ import {
   AuthScreen,
   CreatePostScreen,
   PostDetailScreen,
+  ProfileScreen,
 } from '../screens';
 
 // Contexto do teclado inline
@@ -95,6 +96,11 @@ const PostDetailScreenWrapper = ({ navigation, route }: any) => {
   return <PostDetailScreen navigation={navigation} route={route} />;
 };
 
+// Componente wrapper para ProfileScreen
+const ProfileScreenWrapper = ({ navigation, route }: any) => {
+  return <ProfileScreen navigation={navigation} route={route} />;
+};
+
 // Stack Navigator principal
 const MainStack = () => {
   return (
@@ -160,6 +166,45 @@ const MainStack = () => {
       <Stack.Screen 
         name="PostDetail" 
         component={PostDetailScreenWrapper}
+        options={{ 
+          headerShown: false,
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            };
+          },
+          transitionSpec: {
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300,
+              },
+            },
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 250,
+              },
+            },
+          },
+        }}
+      />
+      <Stack.Screen 
+        name="Profile" 
+        component={ProfileScreenWrapper}
         options={{ 
           headerShown: false,
           cardStyleInterpolator: ({ current, layouts }) => {

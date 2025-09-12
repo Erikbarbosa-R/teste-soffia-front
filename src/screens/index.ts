@@ -4,3 +4,4 @@ export { FavoritesScreen } from './FavoritesScreen';
 export { AuthScreen } from './AuthScreen';
 export { CreatePostScreen } from './CreatePostScreen';
 export { PostDetailScreen } from './PostDetailScreen';
+export { ProfileScreen } from './ProfileScreen';

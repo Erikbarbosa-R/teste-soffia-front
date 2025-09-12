@@ -34,7 +34,6 @@ const SearchButton = styled.TouchableOpacity`
 
 const FeedContainer = styled.View`
   flex: 1;
-  padding: 16px 24px;
   background-color: #F2F2F7;
 `;
 
@@ -173,15 +172,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     navigation.navigate('Search', { searchType: 'all' });
   };
 
+  const handleProfilePress = (userId: string) => {
+    navigation.navigate('Profile', { userId });
+  };
+
   const renderPost = ({ item }: { item: any }) => (
     <TouchableOpacity onPress={() => handlePostPress(item.id)}>
       <PostCard>
         <PostHeader>
-          <ProfileImage>
-            <ProfileImageText>
-              {item.author.name.charAt(0).toUpperCase()}
-            </ProfileImageText>
-          </ProfileImage>
+          <TouchableOpacity onPress={() => handleProfilePress(item.author.id)}>
+            <ProfileImage>
+              <ProfileImageText>
+                {item.author.name.charAt(0).toUpperCase()}
+              </ProfileImageText>
+            </ProfileImage>
+          </TouchableOpacity>
           <ProfileInfo>
             <ProfileName>{item.author.name}</ProfileName>
             <ProfileUsername>@{item.author.name.toLowerCase().replace(/\s+/g, '')}</ProfileUsername>
@@ -228,7 +233,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             keyExtractor={(item) => item.id}
             ListFooterComponent={renderFooter}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 120 }}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 120 }}
             refreshControl={
               <RefreshControl
                 refreshing={false}

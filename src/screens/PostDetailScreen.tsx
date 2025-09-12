@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, KeyboardAvoidingView, Platform, Animated, Dimensions } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, Platform, KeyboardAvoidingView, Keyboard } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavoritesContext } from '../context/FavoritesContext';
-import { useKeyboard } from '../navigation/AppNavigator';
 import apiService from '../services/api';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -41,11 +40,6 @@ const FavoriteButton = styled.TouchableOpacity`
   padding: 8px;
 `;
 
-const ContentContainer = styled.ScrollView`
-  flex: 1;
-  padding: 24px;
-  padding-bottom: 100px;
-`;
 
 const PostSection = styled.View`
   margin-bottom: 32px;
@@ -79,16 +73,14 @@ const AuthorInfo = styled.View`
 
 const AuthorName = styled.Text`
   font-size: 16px;
-  font-weight: 400;
-  color: #5E6064;
-  margin-bottom: 2px;
-  line-height: 16px;
-  letter-spacing: -0.32px;
+  font-weight: bold;
+  color: #000000;
 `;
 
 const AuthorUsername = styled.Text`
   font-size: 14px;
   color: #8E8E93;
+  margin-top: 2px;
 `;
 
 const PostTitle = styled.Text`
@@ -224,7 +216,7 @@ const Overlay = styled.TouchableOpacity`
   z-index: 1;
 `;
 
-const CommentInputSection = styled(Animated.View)`
+const CommentInputSection = styled.View`
   background-color: #FFFFFF;
   padding: 16px 24px;
   border-top-width: 1px;
@@ -270,15 +262,12 @@ interface PostDetailScreenProps {
 export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, route }) => {
   const { postId } = route.params;
   const { favorites, toggleFavorite, isFavorite } = useFavoritesContext();
-  const { isKeyboardVisible, setIsKeyboardVisible } = useKeyboard();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isInputFocused, setIsInputFocused] = useState(false);
-  
-  const slideAnimation = useRef(new Animated.Value(0)).current;
-  const screenHeight = Dimensions.get('window').height;
+  const scrollViewRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadPostDetails();
@@ -353,13 +342,15 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   const handleInputFocus = () => {
     console.log('Campo de comentário focado');
     setIsInputFocused(true);
-    setIsKeyboardVisible(true);
+    // Scroll para o final quando o input for focado
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
   };
 
   const handleInputBlur = () => {
     console.log('Campo de comentário perdeu foco');
     setIsInputFocused(false);
-    setIsKeyboardVisible(false);
   };
 
   if (isLoading || !post) {
@@ -373,18 +364,30 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   }
 
   return (
-    <>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+    >
       <DetailContainer>
         <Header>
           <BackButton onPress={handleBack}>
-            <Ionicons name="arrow-back" size={24} color={isKeyboardVisible ? '#8E8E93' : '#000000'} />
+            <Ionicons name="arrow-back" size={24} color="#000000" />
           </BackButton>
           <HeaderTitle>
             Publicação
           </HeaderTitle>
         </Header>
         
-        <ContentContainer showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          ref={scrollViewRef}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ 
+            padding: 24, 
+            paddingBottom: 100 
+          }}
+          showsVerticalScrollIndicator={false}
+        >
           <PostSection>
             <AuthorSection>
               <ProfileImage>
@@ -433,54 +436,49 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
               </View>
             ))}
           </CommentsSection>
-        </ContentContainer>
+        </ScrollView>
 
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}
-        >
-          <CommentInputSection>
-            <CommentInputContainer>
-              {!isInputFocused && (
-                <Ionicons name="chatbubble-outline" size={20} color="#8E8E93" />
-              )}
-              <CommentInput
-                placeholder="Adicione um comentário"
-                placeholderTextColor="#8E8E93"
-                value={newComment}
-                onChangeText={setNewComment}
-                onFocus={handleInputFocus}
-                onBlur={handleInputBlur}
-                multiline={false}
-                maxLength={500}
-                autoCorrect={false}
-                autoCapitalize="sentences"
-                returnKeyType="send"
-                onSubmitEditing={handleSendComment}
-                blurOnSubmit={false}
-                style={{ 
-                  flex: 1,
-                  fontSize: 16,
-                  color: '#000000',
-                  marginLeft: isInputFocused ? 0 : 8,
-                  marginRight: 12,
-                  paddingVertical: 0,
-                  paddingHorizontal: 0,
-                  textAlignVertical: 'center',
-                  minWidth: 0
-                }}
-              />
-              {isInputFocused && (
-                <SendButton onPress={handleSendComment} disabled={!newComment.trim()}>
-                  <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-                </SendButton>
-              )}
-            </CommentInputContainer>
-          </CommentInputSection>
-        </KeyboardAvoidingView>
+        <CommentInputSection>
+          <CommentInputContainer>
+            {!isInputFocused && (
+              <Ionicons name="chatbubble-outline" size={20} color="#8E8E93" />
+            )}
+            <CommentInput
+              placeholder="Adicione um comentário"
+              placeholderTextColor="#8E8E93"
+              value={newComment}
+              onChangeText={setNewComment}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
+              multiline={false}
+              maxLength={500}
+              autoCorrect={false}
+              autoCapitalize="sentences"
+              returnKeyType="send"
+              onSubmitEditing={handleSendComment}
+              blurOnSubmit={false}
+              style={{ 
+                flex: 1,
+                fontSize: 16,
+                color: '#000000',
+                marginLeft: isInputFocused ? 0 : 8,
+                marginRight: 12,
+                paddingVertical: 0,
+                paddingHorizontal: 0,
+                textAlignVertical: 'center',
+                minWidth: 0
+              }}
+            />
+            {isInputFocused && (
+              <SendButton onPress={handleSendComment} disabled={!newComment.trim()}>
+                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+              </SendButton>
+            )}
+          </CommentInputContainer>
+        </CommentInputSection>
+
+        {isInputFocused && <Overlay onPress={handleInputBlur} />}
       </DetailContainer>
-
-      {isInputFocused && <Overlay onPress={handleInputBlur} />}
-    </>
+    </KeyboardAvoidingView>
   );
 };

@@ -48,7 +48,7 @@ export type RootStackParamList = {
   Home: undefined;
   PostDetail: { postId: string };
   CreatePost: undefined;
-  Profile: undefined;
+  Profile: { userId: string };
 };
 
 export type TabParamList = {
