@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, FlatList, TouchableOpacity, StatusBar, RefreshControl } from 'react-native';
 import styled from 'styled-components/native';
 import { SafeContainer } from '../components';
-import { usePostsAndFavorites } from '../hooks/usePostsAndFavorites';
+import { useFavoritesContext } from '../context/FavoritesContext';
+import apiService from '../services/api';
 import { Loading } from '../components';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -107,7 +108,7 @@ const PostContent = styled.Text`
 
 const FloatingButton = styled.TouchableOpacity`
   position: absolute;
-  bottom: 60px;
+  bottom: 20px;
   right: 24px;
   width: 56px;
   height: 56px;
@@ -127,20 +128,41 @@ interface HomeScreenProps {
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
-  const { 
-    posts, 
-    isLoading, 
-    toggleFavorite, 
-    isFavorite, 
-    refreshData 
-  } = usePostsAndFavorites();
+  const { favorites, toggleFavorite, isFavorite } = useFavoritesContext();
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Carregar posts
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const loadPosts = async () => {
+    setIsLoading(true);
+    try {
+      const response = await apiService.getPosts(1, 10, '');
+      const postsData = response?.data?.posts || [];
+      setPosts(Array.isArray(postsData) ? postsData : []);
+    } catch (error) {
+      console.error('Erro ao carregar posts:', error);
+      setPosts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handlePostPress = (postId: string) => {
     navigation.navigate('PostDetail', { postId });
   };
 
   const handleRefresh = async () => {
-    await refreshData();
+    await loadPosts();
+  };
+
+  const handleFavorite = (postId: string) => {
+    console.log('HomeScreen - Toggle favorite para post:', postId);
+    console.log('HomeScreen - Favoritos antes:', favorites);
+    toggleFavorite(postId);
   };
 
   const handleCreatePost = () => {
@@ -148,7 +170,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleSearch = () => {
-    navigation.navigate('Search');
+    navigation.navigate('Search', { searchType: 'all' });
   };
 
   const renderPost = ({ item }: { item: any }) => (
@@ -164,7 +186,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             <ProfileName>{item.author.name}</ProfileName>
             <ProfileUsername>@{item.author.name.toLowerCase().replace(/\s+/g, '')}</ProfileUsername>
           </ProfileInfo>
-          <FavoriteButton onPress={() => toggleFavorite(item.id)}>
+          <FavoriteButton onPress={() => handleFavorite(item.id)}>
             <Ionicons 
               name={isFavorite(item.id) ? "star" : "star-outline"} 
               size={24} 

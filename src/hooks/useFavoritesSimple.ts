@@ -31,22 +31,28 @@ export const useFavoritesSimple = () => {
   };
 
   const toggleFavorite = useCallback((postId: string) => {
+    console.log('useFavoritesSimple - Toggle favorite:', postId);
+    console.log('useFavoritesSimple - Favoritos atuais:', favorites);
+    
     setFavorites(prevFavorites => {
       let newFavorites: string[];
       
       if (prevFavorites.includes(postId)) {
         // Remover dos favoritos
         newFavorites = prevFavorites.filter(id => id !== postId);
+        console.log('useFavoritesSimple - Removendo dos favoritos:', postId);
       } else {
         // Adicionar aos favoritos
         newFavorites = [...prevFavorites, postId];
+        console.log('useFavoritesSimple - Adicionando aos favoritos:', postId);
       }
       
+      console.log('useFavoritesSimple - Novos favoritos:', newFavorites);
       // Salvar no AsyncStorage
       saveFavorites(newFavorites);
       return newFavorites;
     });
-  }, []);
+  }, [favorites]);
 
   const isFavorite = useCallback((postId: string) => {
     return favorites.includes(postId);

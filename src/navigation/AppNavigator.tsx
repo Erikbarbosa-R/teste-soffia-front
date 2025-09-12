@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { TouchableOpacity } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -14,6 +15,32 @@ import {
   CreatePostScreen,
   PostDetailScreen,
 } from '../screens';
+
+// Contexto do teclado inline
+interface KeyboardContextType {
+  isKeyboardVisible: boolean;
+  setIsKeyboardVisible: (visible: boolean) => void;
+}
+
+const KeyboardContext = createContext<KeyboardContextType | undefined>(undefined);
+
+export const KeyboardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  return (
+    <KeyboardContext.Provider value={{ isKeyboardVisible, setIsKeyboardVisible }}>
+      {children}
+    </KeyboardContext.Provider>
+  );
+};
+
+export const useKeyboard = (): KeyboardContextType => {
+  const context = useContext(KeyboardContext);
+  if (context === undefined) {
+    throw new Error('useKeyboard deve ser usado dentro de um KeyboardProvider');
+  }
+  return context;
+};
 
 const Stack = createStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -63,34 +90,115 @@ const MainTabs = () => (
   </Tab.Navigator>
 );
 
+// Componente wrapper para PostDetailScreen
+const PostDetailScreenWrapper = ({ navigation, route }: any) => {
+  return <PostDetailScreen navigation={navigation} route={route} />;
+};
+
 // Stack Navigator principal
-const MainStack = () => (
-  <Stack.Navigator
-    screenOptions={{
-      headerStyle: {
-        backgroundColor: COLORS.surface,
-        borderBottomColor: COLORS.border,
-      },
-      headerTintColor: COLORS.text,
-    }}
-  >
-    <Stack.Screen 
-      name="MainTabs" 
-      component={MainTabs} 
-      options={{ headerShown: false }}
-    />
-    <Stack.Screen 
-      name="CreatePost" 
-      component={CreatePostScreen}
-      options={{ title: 'Criar Post' }}
-    />
-    <Stack.Screen 
-      name="PostDetail" 
-      component={PostDetailScreen}
-      options={{ title: 'Detalhes do Post' }}
-    />
-  </Stack.Navigator>
-);
+const MainStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: {
+          backgroundColor: COLORS.surface,
+          borderBottomColor: COLORS.border,
+        },
+        headerTintColor: COLORS.text,
+        cardStyleInterpolator: ({ current, layouts }) => {
+          return {
+            cardStyle: {
+              transform: [
+                {
+                  translateX: current.progress.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [layouts.screen.width, 0],
+                  }),
+                },
+              ],
+            },
+          };
+        },
+        transitionSpec: {
+          open: {
+            animation: 'timing',
+            config: {
+              duration: 300,
+            },
+          },
+          close: {
+            animation: 'timing',
+            config: {
+              duration: 250,
+            },
+          },
+        },
+      }}
+    >
+      <Stack.Screen 
+        name="MainTabs" 
+        component={MainTabs} 
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="Search" 
+        component={SearchScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="CreatePost" 
+        component={CreatePostScreen}
+        options={{ 
+          title: 'Nova publicação',
+          headerLeft: ({ onPress }) => (
+            <TouchableOpacity onPress={onPress} style={{ padding: 8 }}>
+              <Ionicons name="close" size={24} color="#000000" />
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen 
+        name="PostDetail" 
+        component={PostDetailScreenWrapper}
+        options={{ 
+          headerShown: false,
+          cardStyleInterpolator: ({ current, layouts }) => {
+            return {
+              cardStyle: {
+                transform: [
+                  {
+                    translateX: current.progress.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [layouts.screen.width, 0],
+                    }),
+                  },
+                ],
+                opacity: current.progress.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            };
+          },
+          transitionSpec: {
+            open: {
+              animation: 'timing',
+              config: {
+                duration: 300,
+              },
+            },
+            close: {
+              animation: 'timing',
+              config: {
+                duration: 250,
+              },
+            },
+          },
+        }}
+      />
+    </Stack.Navigator>
+  );
+};
 
 // Navegação principal
 export const AppNavigator = () => {

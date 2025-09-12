@@ -104,3 +104,6 @@ export interface InputProps {
   numberOfLines?: number;
   error?: string;
 }
+
+// Tipos do Redux
+export type AppDispatch = import('../store').AppDispatch;

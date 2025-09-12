@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
-import { usePostsAndFavorites } from '../hooks/usePostsAndFavorites';
+import { useFavoritesContext } from '../context/FavoritesContext';
+import apiService from '../services/api';
 
 // Componentes styled para o design da imagem
 const FavoritesContainer = styled.View`
@@ -121,22 +122,41 @@ interface FavoritesScreenProps {
 }
 
 export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) => {
-  const { 
-    favorites, 
-    toggleFavorite, 
-    getFavoritePosts, 
-    refreshData, 
-    isLoading 
-  } = usePostsAndFavorites();
-  
+  const { favorites, toggleFavorite } = useFavoritesContext();
+  const [allPosts, setAllPosts] = useState<any[]>([]);
   const [favoritePosts, setFavoritePosts] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Atualizar posts favoritos quando favoritos mudarem
+  // Carregar todos os posts
   useEffect(() => {
-    const favoritePostsList = getFavoritePosts();
-    setFavoritePosts(Array.isArray(favoritePostsList) ? favoritePostsList : []);
-  }, [favorites, getFavoritePosts]);
+    loadPosts();
+  }, []);
+
+  // Filtrar posts favoritos quando favoritos ou posts mudarem
+  useEffect(() => {
+    console.log('FavoritesScreen - Favoritos:', favorites);
+    console.log('FavoritesScreen - Posts disponíveis:', allPosts.length);
+    
+    const filteredPosts = allPosts.filter(post => {
+      const isFav = favorites.includes(post.id);
+      console.log(`Post ${post.id} (${post.title}) - Favorito: ${isFav}`);
+      return isFav;
+    });
+    
+    console.log('FavoritesScreen - Posts filtrados:', filteredPosts.length);
+    setFavoritePosts(filteredPosts);
+  }, [allPosts, favorites]);
+
+  const loadPosts = async () => {
+    try {
+      const response = await apiService.getPosts(1, 10, '');
+      const postsData = response?.data?.posts || [];
+      setAllPosts(Array.isArray(postsData) ? postsData : []);
+    } catch (error) {
+      console.error('Erro ao carregar posts:', error);
+      setAllPosts([]);
+    }
+  };
 
   const handlePostPress = (postId: string) => {
     navigation.navigate('PostDetail', { postId });
@@ -147,12 +167,12 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
   };
 
   const handleSearch = () => {
-    navigation.navigate('Search');
+    navigation.navigate('Search', { searchType: 'favorites' });
   };
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await refreshData();
+    await loadPosts();
     setIsRefreshing(false);
   };
 

@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../types';
+import { RootState, AppDispatch } from '../types';
 import { fetchPosts, createPost, deletePost, toggleFavorite } from '../store/slices';
 import apiService from '../services/api';
 
 // Hook para gerenciar posts
 export const usePosts = () => {
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
   const { posts, isLoading, error, hasMore, currentPage, searchQuery } = useSelector(
     (state: RootState) => state.posts
   );
@@ -57,7 +57,7 @@ export const usePosts = () => {
 // Hook para gerenciar favoritos
 export const useFavorites = () => {
   const { favorites } = useSelector((state: RootState) => state.posts);
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const toggleFavoriteAction = useCallback(
     (postId: string) => {
@@ -84,7 +84,7 @@ export const useFavorites = () => {
 export const useSearch = () => {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   // Debounce da busca
   useEffect(() => {
@@ -144,7 +144,7 @@ export const useConnectivity = () => {
 // Hook para gerenciar paginação
 export const usePagination = () => {
   const { hasMore, isLoading, currentPage } = useSelector((state: RootState) => state.posts);
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<AppDispatch>();
 
   const loadMore = useCallback(() => {
     if (hasMore && !isLoading) {

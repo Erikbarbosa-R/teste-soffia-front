@@ -70,8 +70,8 @@ const ContentInput = styled.TextInput`
   text-align-vertical: top;
 `;
 
-const PublishButton = styled.TouchableOpacity<{ disabled?: boolean }>`
-  background-color: ${props => props.disabled ? '#C6C6C8' : '#007AFF'};
+const PublishButton = styled.TouchableOpacity<{ disabled?: boolean; isPublishing?: boolean }>`
+  background-color: ${props => props.isPublishing ? '#C6C6C8' : '#007AFF'};
   padding: 16px 24px;
   border-radius: 12px;
   flex-direction: row;
@@ -79,6 +79,7 @@ const PublishButton = styled.TouchableOpacity<{ disabled?: boolean }>`
   justify-content: center;
   min-height: 56px;
   margin-top: auto;
+  opacity: ${props => props.disabled && !props.isPublishing ? 0.5 : 1};
 `;
 
 const PublishButtonText = styled.Text`
@@ -126,18 +127,11 @@ export const CreatePostScreen: React.FC<CreatePostScreenProps> = ({ navigation }
     }
   };
 
-  const isDisabled = !title.trim() || !content.trim() || isLoading;
+  const isDisabled = !title.trim() || !content.trim();
+  const isPublishing = isLoading;
 
   return (
     <CreatePostContainer>
-      <Header>
-        <CloseButton onPress={handleClose}>
-          <Ionicons name="close" size={24} color="#000000" />
-        </CloseButton>
-        <HeaderTitle>Nova publicação</HeaderTitle>
-        <View style={{ width: 40 }} />
-      </Header>
-
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -170,13 +164,16 @@ export const CreatePostScreen: React.FC<CreatePostScreenProps> = ({ navigation }
           <PublishButton 
             onPress={handlePublish} 
             disabled={isDisabled}
+            isPublishing={isPublishing}
           >
             <Ionicons 
               name="paper-plane" 
               size={20} 
               color="#FFFFFF" 
             />
-            <PublishButtonText>Publicar</PublishButtonText>
+            <PublishButtonText>
+              {isPublishing ? 'Publicando...' : 'Publicar'}
+            </PublishButtonText>
           </PublishButton>
         </ContentContainer>
       </KeyboardAvoidingView>

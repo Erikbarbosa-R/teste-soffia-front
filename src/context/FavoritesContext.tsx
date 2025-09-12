@@ -28,7 +28,9 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
     try {
       const storedFavorites = await AsyncStorage.getItem(STORAGE_KEYS.FAVORITES);
       if (storedFavorites) {
-        setFavorites(JSON.parse(storedFavorites));
+        const favoritesData = JSON.parse(storedFavorites);
+        setFavorites(Array.isArray(favoritesData) ? favoritesData : []);
+        console.log('FavoritesProvider - Favoritos carregados:', favoritesData);
       }
     } catch (error) {
       console.error('Erro ao carregar favoritos:', error);
@@ -38,6 +40,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
   const saveFavorites = async (newFavorites: string[]) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(newFavorites));
+      console.log('FavoritesProvider - Favoritos salvos:', newFavorites);
     } catch (error) {
       console.error('Erro ao salvar favoritos:', error);
     }
@@ -48,6 +51,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
       const newFavorites = [...favorites, postId];
       setFavorites(newFavorites);
       saveFavorites(newFavorites);
+      console.log('FavoritesProvider - Adicionado aos favoritos:', postId);
     }
   };
 
@@ -55,9 +59,13 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
     const newFavorites = favorites.filter(id => id !== postId);
     setFavorites(newFavorites);
     saveFavorites(newFavorites);
+    console.log('FavoritesProvider - Removido dos favoritos:', postId);
   };
 
   const toggleFavorite = (postId: string) => {
+    console.log('FavoritesProvider - Toggle favorite:', postId);
+    console.log('FavoritesProvider - Favoritos atuais:', favorites);
+    
     if (favorites.includes(postId)) {
       removeFavorite(postId);
     } else {
