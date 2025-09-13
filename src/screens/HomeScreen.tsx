@@ -6,6 +6,7 @@ import { useFavoritesContext } from '../context/FavoritesContext';
 import apiService from '../services/api';
 import { Loading } from '../components';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Componentes styled para o design da imagem
 const HomeContainer = styled.View`
@@ -135,6 +136,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   useEffect(() => {
     loadPosts();
   }, []);
+
+  // Recarregar posts quando a tela for focada (ex: após criar um post)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPosts();
+    }, [])
+  );
 
   const loadPosts = async () => {
     setIsLoading(true);

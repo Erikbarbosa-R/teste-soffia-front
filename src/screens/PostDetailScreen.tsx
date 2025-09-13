@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, Platform, KeyboardAvoidingView, Keyboard } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, Platform, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback, BackHandler, Animated } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavoritesContext } from '../context/FavoritesContext';
@@ -22,6 +22,7 @@ const Header = styled.View`
   background-color: #FFFFFF;
   border-bottom-width: 1px;
   border-bottom-color: #E5E5EA;
+  z-index: 10;
 `;
 
 const BackButton = styled.TouchableOpacity`
@@ -208,15 +209,15 @@ const CommentText = styled.Text`
 
 const Overlay = styled.TouchableOpacity`
   position: absolute;
-  top: 0;
+  top: 100px;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.1);
   z-index: 1;
 `;
 
-const CommentInputSection = styled.View`
+const CommentInputSection = styled(Animated.View)`
   background-color: #FFFFFF;
   padding: 16px 24px;
   border-top-width: 1px;
@@ -225,15 +226,21 @@ const CommentInputSection = styled.View`
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 10;
+  z-index: 20;
+  align-items: center;
 `;
 
-const CommentInputContainer = styled.View`
+const CommentInputContainer = styled(Animated.View)`
   flex-direction: row;
   align-items: center;
   background-color: #EFF1F5;
-  border-radius: 10px;
-  padding: 12px 16px;
+  height: 48px;
+  border-radius: 8px;
+  padding-top: 12px;
+  padding-right: 16px;
+  padding-bottom: 12px;
+  padding-left: 16px;
+  position: relative;
 `;
 
 const CommentInput = styled.TextInput`
@@ -244,14 +251,20 @@ const CommentInput = styled.TextInput`
   min-width: 0;
 `;
 
+const CommentIcon = styled.View`
+  position: absolute;
+  left: 16px;
+  z-index: 1;
+`;
+
 const SendButton = styled.TouchableOpacity`
   background-color: #007AFF;
-  width: 32px;
-  height: 32px;
-  border-radius: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
   justify-content: center;
   align-items: center;
-  margin-left: 8px;
+  z-index: 20;
 `;
 
 interface PostDetailScreenProps {
@@ -268,10 +281,30 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   const [isLoading, setIsLoading] = useState(true);
   const [isInputFocused, setIsInputFocused] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
+  const inputPositionAnimation = useRef(new Animated.Value(0)).current;
+  const inputWidthAnimation = useRef(new Animated.Value(350)).current;
 
   useEffect(() => {
     loadPostDetails();
   }, [postId]);
+
+  // Configurar o botão de voltar do celular para desfocar o input
+  useEffect(() => {
+    const backAction = () => {
+      if (isInputFocused) {
+        // Se o input estiver focado, desfoca ele em vez de sair da tela
+        inputRef.current?.blur();
+        setIsInputFocused(false);
+        return true; // Indica que o evento foi tratado
+      }
+      return false; // Permite o comportamento padrão (sair da tela)
+    };
+
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+
+    return () => backHandler.remove();
+  }, [isInputFocused]);
 
   const loadPostDetails = async () => {
     setIsLoading(true);
@@ -342,6 +375,21 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   const handleInputFocus = () => {
     console.log('Campo de comentário focado');
     setIsInputFocused(true);
+    
+    // Animar o input para cima quando focado
+    Animated.parallel([
+      Animated.timing(inputPositionAnimation, {
+        toValue: 1,
+        duration: 250,
+        useNativeDriver: false,
+      }),
+      Animated.timing(inputWidthAnimation, {
+        toValue: 325,
+        duration: 250,
+        useNativeDriver: false,
+      })
+    ]).start();
+    
     // Scroll para o final quando o input for focado
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
@@ -351,6 +399,27 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   const handleInputBlur = () => {
     console.log('Campo de comentário perdeu foco');
     setIsInputFocused(false);
+    
+    // Animar o input de volta para a posição inicial
+    Animated.parallel([
+      Animated.timing(inputPositionAnimation, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: false,
+      }),
+      Animated.timing(inputWidthAnimation, {
+        toValue: 350,
+        duration: 250,
+        useNativeDriver: false,
+      })
+    ]).start();
+  };
+
+  const handleOutsidePress = () => {
+    if (isInputFocused) {
+      inputRef.current?.blur();
+      setIsInputFocused(false);
+    }
   };
 
   if (isLoading || !post) {
@@ -364,11 +433,7 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
+    <TouchableWithoutFeedback onPress={handleOutsidePress}>
       <DetailContainer>
         <Header>
           <BackButton onPress={handleBack}>
@@ -438,47 +503,59 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
           </CommentsSection>
         </ScrollView>
 
-        <CommentInputSection>
-          <CommentInputContainer>
-            {!isInputFocused && (
-              <Ionicons name="chatbubble-outline" size={20} color="#8E8E93" />
-            )}
-            <CommentInput
-              placeholder="Adicione um comentário"
-              placeholderTextColor="#8E8E93"
-              value={newComment}
-              onChangeText={setNewComment}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              multiline={false}
-              maxLength={500}
-              autoCorrect={false}
-              autoCapitalize="sentences"
-              returnKeyType="send"
-              onSubmitEditing={handleSendComment}
-              blurOnSubmit={false}
-              style={{ 
-                flex: 1,
-                fontSize: 16,
-                color: '#000000',
-                marginLeft: isInputFocused ? 0 : 8,
-                marginRight: 12,
-                paddingVertical: 0,
-                paddingHorizontal: 0,
-                textAlignVertical: 'center',
-                minWidth: 0
+        <CommentInputSection
+          style={{
+            bottom: inputPositionAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, Platform.OS === 'ios' ? 380 : 330],
+            }),
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <CommentInputContainer
+              style={{
+                width: inputWidthAnimation,
               }}
-            />
+            >
+              {!isInputFocused && (
+                <CommentIcon>
+                  <Ionicons name="chatbubble-outline" size={16} color="#8E8E93" />
+                </CommentIcon>
+              )}
+              <TextInput
+                ref={inputRef}
+                placeholder="Adicione um comentário"
+                placeholderTextColor="#8E8E93"
+                value={newComment}
+                onChangeText={setNewComment}
+                onFocus={handleInputFocus}
+                onBlur={handleInputBlur}
+                multiline={false}
+                maxLength={500}
+                autoCorrect={false}
+                autoCapitalize="sentences"
+                returnKeyType="send"
+                onSubmitEditing={handleSendComment}
+                blurOnSubmit={false}
+                style={{ 
+                  flex: 1,
+                  fontSize: 16,
+                  color: '#000000',
+                  paddingVertical: 0,
+                  paddingHorizontal: isInputFocused ? 0 : 24,
+                  textAlignVertical: 'center',
+                  minWidth: 0
+                }}
+              />
+            </CommentInputContainer>
             {isInputFocused && (
               <SendButton onPress={handleSendComment} disabled={!newComment.trim()}>
-                <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+                <Ionicons name="arrow-forward" size={24} color="#FFFFFF" />
               </SendButton>
             )}
-          </CommentInputContainer>
+          </View>
         </CommentInputSection>
-
-        {isInputFocused && <Overlay onPress={handleInputBlur} />}
       </DetailContainer>
-    </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };

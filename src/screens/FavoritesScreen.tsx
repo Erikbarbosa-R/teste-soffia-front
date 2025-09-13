@@ -4,6 +4,7 @@ import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavoritesContext } from '../context/FavoritesContext';
 import apiService from '../services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 // Componentes styled para o design da imagem
 const FavoritesContainer = styled.View`
@@ -131,6 +132,13 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
   useEffect(() => {
     loadPosts();
   }, []);
+
+  // Recarregar posts quando a tela for focada (ex: após favoritar/desfavoritar)
+  useFocusEffect(
+    React.useCallback(() => {
+      loadPosts();
+    }, [])
+  );
 
   // Filtrar posts favoritos quando favoritos ou posts mudarem
   useEffect(() => {
