@@ -17,10 +17,19 @@ export const usePostsAndFavorites = () => {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      // Carregar posts
-      const postsResponse = await apiService.getPosts(1, 10, '');
-      const postsData = postsResponse?.data?.posts || [];
-      setPosts(Array.isArray(postsData) ? postsData : []);
+      // Tentar carregar posts ordenados por data (mais novos primeiro)
+      const postsData = await apiService.getPosts({ sort: 'created_at_desc' });
+      const postsArray = Array.isArray(postsData) ? postsData : [];
+      
+      // Se o backend não suportar ordenação, ordenar localmente
+      const sortedPosts = postsArray.sort((a, b) => {
+        const dateA = new Date(a.created_at || a.createdAt || 0);
+        const dateB = new Date(b.created_at || b.createdAt || 0);
+        return dateB.getTime() - dateA.getTime(); // Ordem decrescente (mais novos primeiro)
+      });
+      
+      console.log('usePostsAndFavorites - Posts carregados:', sortedPosts.length);
+      setPosts(sortedPosts);
 
       // Carregar favoritos
       const storedFavorites = await AsyncStorage.getItem(STORAGE_KEYS.FAVORITES);
