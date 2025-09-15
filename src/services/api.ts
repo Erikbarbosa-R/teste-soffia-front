@@ -1,248 +1,396 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Post, User, CreatePostRequest, LoginRequest, RegisterRequest, ApiResponse } from '../types';
+import { 
+  Post, 
+  User, 
+  Tag,
+  Comment,
+  CreatePostRequest, 
+  LoginRequest, 
+  RegisterRequest,
+  CreateCommentRequest,
+  LoginResponse,
+  DashboardStats,
+  ActivityItem
+} from '../types';
 import { API_ENDPOINTS, STORAGE_KEYS } from '../constants';
-
-// Dados mock para simular uma API
-const MOCK_USERS: User[] = [
-  {
-    id: '1',
-    name: 'João Silva',
-    email: 'joao@email.com',
-    avatar: 'https://ui-avatars.com/api/?name=João+Silva&background=007AFF&color=fff',
-    createdAt: '2024-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    name: 'Maria Santos',
-    email: 'maria@email.com',
-    avatar: 'https://ui-avatars.com/api/?name=Maria+Santos&background=5856D6&color=fff',
-    createdAt: '2024-01-02T00:00:00Z',
-  },
-  {
-    id: '3',
-    name: 'Pedro Oliveira',
-    email: 'pedro@email.com',
-    avatar: 'https://ui-avatars.com/api/?name=Pedro+Oliveira&background=34C759&color=fff',
-    createdAt: '2024-01-03T00:00:00Z',
-  },
-];
-
-const MOCK_POSTS: Post[] = [
-  {
-    id: '1',
-    title: 'Primeiro Post',
-    content: 'Este é o conteúdo do primeiro post. Aqui você pode escrever sobre qualquer coisa interessante.',
-    author: MOCK_USERS[0],
-    createdAt: '2024-01-01T10:00:00Z',
-    updatedAt: '2024-01-01T10:00:00Z',
-    likes: 15,
-  },
-  {
-    id: '2',
-    title: 'React Native é Incrível',
-    content: 'Desenvolvimento mobile com React Native oferece uma experiência única. A possibilidade de criar apps para iOS e Android com uma única base de código é fantástica.',
-    author: MOCK_USERS[1],
-    createdAt: '2024-01-02T14:30:00Z',
-    updatedAt: '2024-01-02T14:30:00Z',
-    likes: 28,
-  },
-  {
-    id: '3',
-    title: 'Dicas de Performance',
-    content: 'Algumas dicas importantes para otimizar a performance do seu app React Native: use FlatList para listas grandes, implemente lazy loading e otimize as imagens.',
-    author: MOCK_USERS[2],
-    createdAt: '2024-01-03T09:15:00Z',
-    updatedAt: '2024-01-03T09:15:00Z',
-    likes: 42,
-  },
-];
+import { getBaseURL } from '../config/environment';
 
 class ApiService {
   private static instance: ApiService;
-  private posts: Post[] = [...MOCK_POSTS];
-  private users: User[] = [...MOCK_USERS];
+  private baseURL: string;
+  private token: string | null = null;
 
-  static getInstance(): ApiService {
+  private constructor() {
+    this.baseURL = getBaseURL();
+  }
+
+  public static getInstance(): ApiService {
     if (!ApiService.instance) {
       ApiService.instance = new ApiService();
     }
     return ApiService.instance;
   }
 
-  // Simular delay de rede
-  private async delay(ms: number = 500): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  // Método para fazer requisições HTTP
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+    
+    const config: RequestInit = {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(this.token && { 'Authorization': `Bearer ${this.token}` }),
+        ...options.headers,
+      },
+      ...options,
+    };
+
+    console.log('API Request:', { 
+      url, 
+      method: config.method || 'GET', 
+      hasToken: !!this.token,
+      body: config.body 
+    });
+
+    try {
+      const response = await fetch(url, config);
+      
+      console.log('API Response Status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('API Error Response:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      // Se a resposta for 204 (No Content), retorna void
+      if (response.status === 204) {
+        return {} as T;
+      }
+
+      const data = await response.json();
+      console.log('API Response Data:', data);
+      return data;
+    } catch (error) {
+      console.error('API Request Error:', error);
+      throw error;
+    }
   }
 
-  // Simular erro ocasional
-  private shouldSimulateError(): boolean {
-    return Math.random() < 0.01; // 1% de chance de erro (reduzido para testes)
+  // Método para definir o token de autenticação
+  public async setToken(token: string | null): Promise<void> {
+    this.token = token;
+    if (token) {
+      await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, token);
+    } else {
+      await AsyncStorage.removeItem(STORAGE_KEYS.USER_TOKEN);
+    }
+  }
+
+  // Método para carregar token do AsyncStorage
+  public async loadToken(): Promise<void> {
+    try {
+      const token = await AsyncStorage.getItem(STORAGE_KEYS.USER_TOKEN);
+      this.token = token;
+    } catch (error) {
+      console.error('Erro ao carregar token:', error);
+      this.token = null;
+    }
+  }
+
+  // Health Check
+  async checkHealth(): Promise<{ status: string }> {
+    return this.request<{ status: string }>(API_ENDPOINTS.HEALTH);
+  }
+
+  async ping(): Promise<{ pong: boolean }> {
+    return this.request<{ pong: boolean }>(API_ENDPOINTS.PING);
   }
 
   // Autenticação
-  async login(credentials: LoginRequest): Promise<ApiResponse<{ user: User; token: string }>> {
-    await this.delay(800);
-    
-    if (this.shouldSimulateError()) {
-      throw new Error('Erro de conexão. Tente novamente.');
-    }
+  async login(credentials: LoginRequest): Promise<LoginResponse> {
+    const response = await this.request<LoginResponse>(
+      API_ENDPOINTS.AUTH.LOGIN,
+      {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      }
+    );
 
-    // Aceitar login com usuário específico ou qualquer usuário existente
-    let user = this.users.find(u => u.email === credentials.email);
-    
-    // Se não encontrar o usuário específico, usar o primeiro usuário disponível
-    if (!user) {
-      user = this.users[0]; // João Silva
-    }
+    // Salvar token e dados do usuário
+    await this.setToken(response.token);
+    await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(response.user));
 
-    const token = `token_${user.id}_${Date.now()}`;
-    
-    // Salvar token no AsyncStorage
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, token);
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
-
-    return {
-      data: { user, token },
-      message: 'Login realizado com sucesso',
-      success: true,
-    };
+    return response;
   }
 
-  async register(userData: RegisterRequest): Promise<ApiResponse<{ user: User; token: string }>> {
-    await this.delay(1000);
+  async register(userData: RegisterRequest): Promise<void> {
+    await this.request<void>(
+      API_ENDPOINTS.AUTH.REGISTER,
+      {
+        method: 'POST',
+        body: JSON.stringify(userData),
+      }
+    );
+  }
+
+  async getCurrentUser(): Promise<User> {
+    console.log('ApiService - Obtendo usuário atual...');
+    console.log('ApiService - Token atual:', this.token ? 'Presente' : 'Ausente');
     
-    if (this.shouldSimulateError()) {
-      throw new Error('Erro de conexão. Tente novamente.');
+    try {
+      const response = await this.request<User>(API_ENDPOINTS.AUTH.ME);
+      console.log('ApiService - Resposta do usuário atual:', response);
+      
+      // A API pode retornar o usuário diretamente ou dentro de um campo data
+      const user = (response as any)?.data || response;
+      console.log('ApiService - Usuário processado:', user);
+      
+      return user;
+    } catch (error: any) {
+      console.error('ApiService - Erro ao obter usuário atual:', error);
+      console.error('ApiService - Status do erro:', error?.status);
+      console.error('ApiService - Mensagem do erro:', error?.message);
+      throw error;
     }
-
-    const existingUser = this.users.find(u => u.email === userData.email);
-    if (existingUser) {
-      throw new Error('Email já cadastrado');
-    }
-
-    const newUser: User = {
-      id: (this.users.length + 1).toString(),
-      name: userData.name,
-      email: userData.email,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=007AFF&color=fff`,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.users.push(newUser);
-    const token = `token_${newUser.id}_${Date.now()}`;
-
-    // Salvar dados no AsyncStorage
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_TOKEN, token);
-    await AsyncStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(newUser));
-
-    return {
-      data: { user: newUser, token },
-      message: 'Usuário criado com sucesso',
-      success: true,
-    };
   }
 
   async logout(): Promise<void> {
-    await AsyncStorage.multiRemove([STORAGE_KEYS.USER_TOKEN, STORAGE_KEYS.USER_DATA]);
+    try {
+      await this.request<void>(API_ENDPOINTS.AUTH.LOGOUT, {
+        method: 'POST',
+      });
+    } finally {
+      // Sempre limpar dados locais, mesmo se a requisição falhar
+      await this.setToken(null);
+      await AsyncStorage.multiRemove([
+        STORAGE_KEYS.USER_DATA,
+        STORAGE_KEYS.FAVORITES,
+        STORAGE_KEYS.OFFLINE_POSTS,
+      ]);
+    }
+  }
+
+  async refreshToken(): Promise<LoginResponse> {
+    const response = await this.request<LoginResponse>(
+      API_ENDPOINTS.AUTH.REFRESH,
+      {
+        method: 'POST',
+      }
+    );
+
+    await this.setToken(response.token);
+    return response;
   }
 
   // Posts
-  async getPosts(page: number = 1, limit: number = 10, searchQuery?: string): Promise<ApiResponse<{ posts: Post[]; hasMore: boolean }>> {
-    await this.delay(600);
+  async getPosts(params?: { query?: string; tag?: string; per_page?: number; sort?: string }): Promise<Post[]> {
+    let endpoint = API_ENDPOINTS.POSTS;
     
-    if (this.shouldSimulateError()) {
-      throw new Error('Erro ao carregar posts');
+    if (params) {
+      const queryParams = new URLSearchParams();
+      if (params.query) {
+        // Normalizar query para busca case-insensitive
+        const normalizedQuery = params.query.trim().toLowerCase();
+        queryParams.append('query', normalizedQuery);
+      }
+      if (params.tag) queryParams.append('tag', params.tag);
+      if (params.per_page) queryParams.append('per_page', params.per_page.toString());
+      if (params.sort) queryParams.append('sort', params.sort);
+      
+      if (queryParams.toString()) {
+        endpoint += `?${queryParams.toString()}`;
+      }
     }
-
-    let filteredPosts = [...this.posts];
-
-    // Aplicar filtro de busca se fornecido
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filteredPosts = filteredPosts.filter(post => 
-        post.title.toLowerCase().includes(query) ||
-        post.content.toLowerCase().includes(query) ||
-        post.author.name.toLowerCase().includes(query)
-      );
-    }
-
-    // Aplicar paginação
-    const startIndex = (page - 1) * limit;
-    const endIndex = startIndex + limit;
-    const paginatedPosts = filteredPosts.slice(startIndex, endIndex);
-
-    // Carregar favoritos do AsyncStorage
-    const favorites = await this.getFavorites();
-    const postsWithFavorites = paginatedPosts.map(post => ({
-      ...post,
-      isFavorite: favorites.includes(post.id),
-    }));
-
-    const hasMore = endIndex < filteredPosts.length;
-
-    return {
-      data: { posts: postsWithFavorites, hasMore },
-      message: 'Posts carregados com sucesso',
-      success: true,
-    };
+    
+    console.log('ApiService - Carregando posts com endpoint:', endpoint);
+    const response = await this.request<any>(endpoint);
+    
+    // A API retorna { data: Post[], message: string, pagination: object }
+    const posts = response?.data || [];
+    console.log('ApiService - Posts recebidos:', posts.length);
+    
+    return posts;
   }
 
-  async createPost(postData: CreatePostRequest, authorId: string): Promise<ApiResponse<Post>> {
-    await this.delay(800);
-    
-    if (this.shouldSimulateError()) {
-      throw new Error('Erro ao criar post');
-    }
-
-    const author = this.users.find(u => u.id === authorId);
-    if (!author) {
-      throw new Error('Autor não encontrado');
-    }
-
-    const newPost: Post = {
-      id: (this.posts.length + 1).toString(),
-      title: postData.title,
-      content: postData.content,
-      author,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      likes: 0,
-    };
-
-    this.posts.unshift(newPost); // Adicionar no início da lista
-
-    return {
-      data: newPost,
-      message: 'Post criado com sucesso',
-      success: true,
-    };
+  async searchPosts(query: string): Promise<Post[]> {
+    // Normalizar a query para busca case-insensitive
+    const normalizedQuery = query.trim().toLowerCase();
+    return this.getPosts({ query: normalizedQuery });
   }
 
-  async deletePost(postId: string): Promise<ApiResponse<void>> {
-    await this.delay(500);
-    
-    if (this.shouldSimulateError()) {
-      throw new Error('Erro ao deletar post');
-    }
-
-    const postIndex = this.posts.findIndex(p => p.id === postId);
-    if (postIndex === -1) {
-      throw new Error('Post não encontrado');
-    }
-
-    this.posts.splice(postIndex, 1);
-
-    // Remover dos favoritos também
-    await this.removeFavorite(postId);
-
-    return {
-      data: undefined,
-      message: 'Post deletado com sucesso',
-      success: true,
-    };
+  async getPost(id: string): Promise<Post> {
+    const response = await this.request<any>(`${API_ENDPOINTS.POSTS}/${id}`);
+    console.log('ApiService - Post carregado:', response);
+    // A API retorna { data: Post, message: string }
+    return response?.data || response;
   }
 
-  // Favoritos (usando AsyncStorage como cache)
+  async createPost(postData: CreatePostRequest): Promise<Post> {
+    console.log('ApiService - Criando post com dados:', postData);
+    console.log('ApiService - Token atual:', this.token ? 'Presente' : 'Ausente');
+    console.log('ApiService - Token completo:', this.token);
+    console.log('ApiService - Base URL:', this.baseURL);
+    console.log('ApiService - Endpoint:', API_ENDPOINTS.POSTS);
+    
+    try {
+      const response = await this.request<any>(API_ENDPOINTS.POSTS, {
+        method: 'POST',
+        body: JSON.stringify(postData),
+      });
+      
+      console.log('ApiService - Resposta da criação:', response);
+      
+      // A API pode retornar o post diretamente ou dentro de um campo data
+      return response?.data || response;
+    } catch (error: any) {
+      console.error('ApiService - Erro ao criar post:', error);
+      console.error('ApiService - Status do erro:', error?.status);
+      console.error('ApiService - Mensagem do erro:', error?.message);
+      console.error('ApiService - Dados enviados:', postData);
+      throw error;
+    }
+  }
+
+  async updatePost(id: string, postData: Partial<CreatePostRequest>): Promise<Post> {
+    return this.request<Post>(`${API_ENDPOINTS.POSTS}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(postData),
+    });
+  }
+
+  async deletePost(id: string): Promise<void> {
+    return this.request<void>(`${API_ENDPOINTS.POSTS}/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Comentários
+  async createComment(postId: string, commentData: CreateCommentRequest): Promise<Comment> {
+    console.log('ApiService - Criando comentário...');
+    console.log('ApiService - Post ID:', postId);
+    console.log('ApiService - Dados do comentário:', commentData);
+    console.log('ApiService - Token atual:', this.token ? 'Presente' : 'Ausente');
+    console.log('ApiService - Token completo:', this.token);
+    console.log('ApiService - URL completa:', `${this.baseURL}${API_ENDPOINTS.POSTS}/${postId}/comments`);
+    
+    // Garantir que os dados estão no formato correto
+    const requestData = {
+      content: commentData.content,
+      post_id: postId
+    };
+    
+    console.log('ApiService - Dados formatados para envio:', requestData);
+    
+    try {
+      const response = await this.request<Comment>(`${API_ENDPOINTS.POSTS}/${postId}/comments`, {
+        method: 'POST',
+        body: JSON.stringify(requestData),
+      });
+      
+      console.log('ApiService - Resposta da criação do comentário:', response);
+      
+      // A API pode retornar o comentário diretamente ou dentro de um campo data
+      return (response as any)?.data || response;
+    } catch (error: any) {
+      console.error('ApiService - Erro ao criar comentário:', error);
+      console.error('ApiService - Status do erro:', error?.status);
+      console.error('ApiService - Mensagem do erro:', error?.message);
+      console.error('ApiService - Dados enviados:', requestData);
+      
+      // Se der erro 500, tentar formato alternativo
+      if (error?.status === 500) {
+        console.log('ApiService - Tentando formato alternativo para comentário...');
+        try {
+          const alternativeData = {
+            conteudo: commentData.content,
+            post_id: postId
+          };
+          
+          console.log('ApiService - Dados alternativos:', alternativeData);
+          
+          const response = await this.request<Comment>(`${API_ENDPOINTS.POSTS}/${postId}/comments`, {
+            method: 'POST',
+            body: JSON.stringify(alternativeData),
+          });
+          
+          console.log('ApiService - Resposta alternativa:', response);
+          return (response as any)?.data || response;
+        } catch (altError) {
+          console.error('ApiService - Erro na tentativa alternativa:', altError);
+          throw altError;
+        }
+      }
+      
+      throw error;
+    }
+  }
+
+  async deleteComment(postId: string, commentId: string): Promise<void> {
+    return this.request<void>(`${API_ENDPOINTS.POSTS}/${postId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Usuários
+  async getUsers(): Promise<User[]> {
+    return this.request<User[]>(API_ENDPOINTS.USERS);
+  }
+
+  async getUser(id: string): Promise<User> {
+    return this.request<User>(`${API_ENDPOINTS.USERS}/${id}`);
+  }
+
+  async updateUser(id: string, userData: Partial<User>): Promise<User> {
+    return this.request<User>(`${API_ENDPOINTS.USERS}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(userData),
+    });
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    return this.request<void>(`${API_ENDPOINTS.USERS}/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Tags
+  async getTags(): Promise<Tag[]> {
+    return this.request<Tag[]>(API_ENDPOINTS.TAGS);
+  }
+
+  async createTag(tagData: { nome: string; cor: string }): Promise<Tag> {
+    return this.request<Tag>(API_ENDPOINTS.TAGS, {
+      method: 'POST',
+      body: JSON.stringify(tagData),
+    });
+  }
+
+  async updateTag(id: string, tagData: Partial<Tag>): Promise<Tag> {
+    return this.request<Tag>(`${API_ENDPOINTS.TAGS}/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(tagData),
+    });
+  }
+
+  async deleteTag(id: string): Promise<void> {
+    return this.request<void>(`${API_ENDPOINTS.TAGS}/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Dashboard
+  async getDashboardStats(): Promise<DashboardStats> {
+    return this.request<DashboardStats>(API_ENDPOINTS.DASHBOARD.STATS);
+  }
+
+  async getDashboardActivity(): Promise<ActivityItem[]> {
+    return this.request<ActivityItem[]>(API_ENDPOINTS.DASHBOARD.ACTIVITY);
+  }
+
+  // Favoritos (mantido para compatibilidade com o frontend atual)
   async getFavorites(): Promise<string[]> {
     try {
       const favorites = await AsyncStorage.getItem(STORAGE_KEYS.FAVORITES);
@@ -253,7 +401,7 @@ class ApiService {
     }
   }
 
-  async addFavorite(postId: string): Promise<void> {
+  async addToFavorites(postId: string): Promise<void> {
     try {
       const favorites = await this.getFavorites();
       if (!favorites.includes(postId)) {
@@ -262,28 +410,20 @@ class ApiService {
       }
     } catch (error) {
       console.error('Erro ao adicionar favorito:', error);
-      throw error;
     }
   }
 
-  async removeFavorite(postId: string): Promise<void> {
+  async removeFromFavorites(postId: string): Promise<void> {
     try {
       const favorites = await this.getFavorites();
       const updatedFavorites = favorites.filter(id => id !== postId);
       await AsyncStorage.setItem(STORAGE_KEYS.FAVORITES, JSON.stringify(updatedFavorites));
     } catch (error) {
       console.error('Erro ao remover favorito:', error);
-      throw error;
     }
   }
 
-  // Verificar se está offline
-  async isOffline(): Promise<boolean> {
-    // Simular verificação de conectividade
-    return Math.random() < 0.05; // 5% de chance de estar offline
-  }
-
-  // Salvar posts offline
+  // Método para salvar posts offline
   async saveOfflinePosts(posts: Post[]): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.OFFLINE_POSTS, JSON.stringify(posts));
@@ -292,7 +432,7 @@ class ApiService {
     }
   }
 
-  // Carregar posts offline
+  // Método para carregar posts offline
   async getOfflinePosts(): Promise<Post[]> {
     try {
       const posts = await AsyncStorage.getItem(STORAGE_KEYS.OFFLINE_POSTS);

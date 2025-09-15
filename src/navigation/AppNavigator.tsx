@@ -4,9 +4,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useSelector } from 'react-redux';
-import { RootState } from '../types';
 import { COLORS } from '../constants';
+import { AuthProvider, useAuthContext } from '../context/AuthContext';
+import { AuthLoading } from '../components/AuthLoading';
 import {
   HomeScreen,
   SearchScreen,
@@ -246,12 +246,24 @@ const MainStack = () => {
 };
 
 // Navegação principal
-export const AppNavigator = () => {
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+const AppNavigatorContent = () => {
+  const { isAuthenticated, isLoading } = useAuthContext();
+
+  if (isLoading) {
+    return <AuthLoading text="Verificando autenticação..." />;
+  }
 
   return (
     <NavigationContainer>
       {isAuthenticated ? <MainStack /> : <AuthStack />}
     </NavigationContainer>
+  );
+};
+
+export const AppNavigator = () => {
+  return (
+    <AuthProvider>
+      <AppNavigatorContent />
+    </AuthProvider>
   );
 };
