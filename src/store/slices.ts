@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { RootState } from '../types';
 import apiService from '../services/api';
-import { Post, User, CreatePostRequest, LoginRequest, RegisterRequest } from '../types';
+import { Post, User, CreatePostRequest, LoginRequest, RegisterRequest, LoginResponse } from '../types';
 
 // Thunks para autenticação
 export const loginUser = createAsyncThunk(
@@ -9,7 +9,7 @@ export const loginUser = createAsyncThunk(
   async (credentials: LoginRequest, { rejectWithValue }) => {
     try {
       const response = await apiService.login(credentials);
-      return response.data;
+      return response;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Erro desconhecido');
     }
@@ -20,8 +20,13 @@ export const registerUser = createAsyncThunk(
   'auth/register',
   async (userData: RegisterRequest, { rejectWithValue }) => {
     try {
-      const response = await apiService.register(userData);
-      return response.data;
+      await apiService.register(userData);
+      // Após registro, fazer login automaticamente
+      const loginResponse = await apiService.login({
+        email: userData.email,
+        password: userData.password
+      });
+      return loginResponse;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Erro desconhecido');
     }
@@ -42,10 +47,10 @@ export const logoutUser = createAsyncThunk(
 // Thunks para posts
 export const fetchPosts = createAsyncThunk(
   'posts/fetchPosts',
-  async ({ page = 1, searchQuery = '' }: { page?: number; searchQuery?: string }, { rejectWithValue }) => {
+  async (_, { rejectWithValue }) => {
     try {
-      const response = await apiService.getPosts(page, 10, searchQuery);
-      return { ...response.data, page, searchQuery };
+      const posts = await apiService.getPosts();
+      return posts;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Erro desconhecido');
     }
@@ -54,10 +59,10 @@ export const fetchPosts = createAsyncThunk(
 
 export const createPost = createAsyncThunk(
   'posts/createPost',
-  async ({ postData, authorId }: { postData: CreatePostRequest; authorId: string }, { rejectWithValue }) => {
+  async (postData: CreatePostRequest, { rejectWithValue }) => {
     try {
-      const response = await apiService.createPost(postData, authorId);
-      return response.data;
+      const post = await apiService.createPost(postData);
+      return post;
     } catch (error) {
       return rejectWithValue(error instanceof Error ? error.message : 'Erro desconhecido');
     }
@@ -84,9 +89,9 @@ export const toggleFavorite = createAsyncThunk(
       const isFavorite = state.posts.favorites.includes(postId);
       
       if (isFavorite) {
-        await apiService.removeFavorite(postId);
+        await apiService.removeFromFavorites(postId);
       } else {
-        await apiService.addFavorite(postId);
+        await apiService.addToFavorites(postId);
       }
       
       return postId;
@@ -193,16 +198,7 @@ const postsSlice = createSlice({
       .addCase(fetchPosts.fulfilled, (state, action) => {
         state.isLoading = false;
         state.error = null;
-        
-        if (action.payload.page === 1) {
-          state.posts = action.payload.posts;
-        } else {
-          state.posts = [...state.posts, ...action.payload.posts];
-        }
-        
-        state.hasMore = action.payload.hasMore;
-        state.currentPage = action.payload.page;
-        state.searchQuery = action.payload.searchQuery;
+        state.posts = action.payload;
       })
       .addCase(fetchPosts.rejected, (state, action) => {
         state.isLoading = false;
