@@ -1,108 +1,105 @@
-# 📱 App React Native - Teste Frontend
+# 📱 Teste Frontend Soffia
 
-Um aplicativo React Native completo desenvolvido com Expo, TypeScript, Redux, Context API, Styled Components e AsyncStorage.
+Um aplicativo React Native completo para gerenciamento de posts, com sistema de autenticação, favoritos e busca. Desenvolvido com foco em performance e experiência do usuário.
 
 ## 🚀 Tecnologias Utilizadas
 
-- **React Native** com **Expo** para desenvolvimento mobile
-- **TypeScript** para tipagem estática
-- **Redux Toolkit** para gerenciamento de estado global
-- **Context API** para estado local e configurações
-- **Styled Components** para estilização
-- **React Navigation** para navegação
-- **AsyncStorage** para persistência local
-- **React Native Reanimated** para animações
-- **Jest** para testes unitários
-- **Documentação** completa dos componentes
+### **Core Framework**
+- **React Native** - Framework principal para desenvolvimento mobile multiplataforma
+- **TypeScript** - Tipagem estática para maior segurança e produtividade no desenvolvimento
+- **Expo** - Plataforma que facilita o desenvolvimento e deploy de apps React Native
 
-## 📋 Funcionalidades
+### **Gerenciamento de Estado**
+- **Redux Toolkit** - Gerenciamento global de estado da aplicação
+- **Context API** - Para estados específicos como autenticação e favoritos
+- **AsyncStorage** - Persistência local de dados (tokens, favoritos, etc.)
 
-### ✅ Implementadas
-- [x] Sistema de autenticação (login/registro)
-- [x] Listagem de posts com paginação
-- [x] Criação de novos posts
-- [x] Sistema de favoritos com AsyncStorage
-- [x] Busca otimizada com Like Search
-- [x] Navegação com tabs e stack navigation
-- [x] Suporte offline-first
-- [x] Animações nas micro-interações
-- [x] Testes unitários
-- [x] Documentação com Storybook
-- [x] Otimizações de performance
+### **Navegação**
+- **React Navigation** - Sistema de navegação entre telas com stack e tab navigators
+- **TypeScript Navigation** - Tipagem completa para navegação
 
-### 🎨 Interface
-- Design moderno e responsivo
-- Tema claro com cores consistentes
-- Componentes reutilizáveis
-- Animações suaves
-- Feedback visual para interações
+### **Estilização**
+- **Styled Components** - CSS-in-JS para componentes estilizados
+- **Design System** - Constantes centralizadas para cores, espaçamentos e tipografia
 
-### 🔧 Arquitetura
-- Estrutura modular e escalável
-- Separação de responsabilidades
-- Hooks personalizados
-- Utilitários compartilhados
-- Tipagem completa com TypeScript
+### **HTTP & API**
+- **Axios** - Cliente HTTP para comunicação com a API
+- **Interceptors** - Para tratamento automático de tokens e erros
 
-## 📁 Estrutura do Projeto
+### **Utilitários**
+- **React Hooks** - Hooks customizados para lógica reutilizável
+- **Form Validation** - Validação de formulários com feedback visual
+- **Debounce** - Para otimizar buscas e evitar requisições desnecessárias
+
+## 🏗️ Arquitetura do Projeto
 
 ```
 src/
 ├── components/          # Componentes reutilizáveis
-│   ├── styled.ts       # Componentes styled-components
-│   ├── Loading.tsx     # Componente de loading
-│   ├── CustomButton.tsx
-│   ├── CustomInput.tsx
-│   ├── PostCard.tsx    # Card de post
-│   ├── PostList.tsx    # Lista de posts
-│   └── index.ts
-├── screens/            # Telas da aplicação
-│   ├── HomeScreen.tsx
-│   ├── SearchScreen.tsx
-│   ├── FavoritesScreen.tsx
-│   ├── AuthScreen.tsx
-│   ├── CreatePostScreen.tsx
-│   └── PostDetailScreen.tsx
-├── navigation/         # Configuração de navegação
-│   └── AppNavigator.tsx
-├── store/              # Redux store
-│   ├── index.ts
-│   └── slices.ts
-├── services/           # Serviços e APIs
-│   └── api.ts
-├── hooks/              # Hooks personalizados
-│   └── index.ts
-├── context/            # Context API
-│   └── AppContext.tsx
-├── types/              # Tipos TypeScript
-│   └── index.ts
-├── utils/              # Utilitários
-│   └── index.ts
-├── constants/          # Constantes
-│   └── index.ts
-├── __tests__/          # Testes unitários
-│   ├── setup.ts
-│   ├── CustomButton.test.tsx
-│   └── utils.test.ts
-└── stories/            # Storybook
-    ├── index.ts
-    ├── Button.stories.tsx
-    ├── Input.stories.tsx
-    └── PostCard.stories.tsx
+│   ├── AuthLoading.tsx  # Loading específico para autenticação
+│   ├── CustomButton.tsx # Botão customizado com variantes
+│   ├── CustomInput.tsx  # Input com validação integrada
+│   ├── PostCard.tsx     # Card de post com ações
+│   └── styled.ts        # Componentes styled-components
+├── config/              # Configurações da aplicação
+│   └── environment.ts   # URLs e configurações de ambiente
+├── context/             # Contextos React
+│   └── AuthContext.tsx  # Contexto global de autenticação
+├── hooks/               # Hooks customizados
+│   ├── useAuth.ts       # Hook para autenticação
+│   ├── useForm.ts       # Hook para gerenciamento de formulários
+│   ├── usePosts.ts      # Hook para gerenciamento de posts
+│   └── useFavorites.ts  # Hook para favoritos
+├── navigation/          # Configuração de navegação
+│   └── AppNavigator.tsx # Navegador principal
+├── screens/             # Telas da aplicação
+│   ├── AuthScreen.tsx   # Login/Registro
+│   ├── HomeScreen.tsx   # Feed principal
+│   ├── CreatePostScreen.tsx # Criação de posts
+│   ├── FavoritesScreen.tsx # Posts favoritos
+│   └── ProfileScreen.tsx   # Perfil do usuário
+├── services/            # Serviços externos
+│   └── api.ts           # Cliente HTTP e endpoints
+├── store/               # Redux store
+│   └── slices.ts        # Redux slices
+├── types/               # Definições TypeScript
+│   └── index.ts         # Tipos globais da aplicação
+└── utils/               # Funções utilitárias
+    └── index.ts         # Helpers e validações
 ```
 
-## 🛠️ Instalação e Execução
+## 🎯 Funcionalidades Principais
 
-### Pré-requisitos
+### **Sistema de Autenticação**
+- Login e registro de usuários
+- Persistência de sessão com AsyncStorage
+- Validação automática de tokens
+- Logout seguro com limpeza de dados
+
+### **Gerenciamento de Posts**
+- Criação de posts com título, conteúdo e tags
+- Listagem ordenada por data (mais novos primeiro)
+- Sistema de favoritos local
+- Busca com debounce para performance
+
+### **Interface do Usuário**
+- Design responsivo e moderno
+- Loading states em todas as operações
+- Feedback visual para ações do usuário
+- Navegação intuitiva entre telas
+
+## 🔧 Configuração e Instalação
+
+### **Pré-requisitos**
 - Node.js (versão 16 ou superior)
 - npm ou yarn
-- Expo CLI
-- Android Studio (para teste no Android)
+- Expo CLI (`npm install -g @expo/cli`)
+- Dispositivo móvel com Expo Go ou emulador
 
-### Instalação
+### **Instalação**
 ```bash
 # Clone o repositório
-git clone <url-do-repositorio>
+git clone https://github.com/seu-usuario/teste-frontt-soffia.git
 cd teste-frontt-soffia
 
 # Instale as dependências
@@ -112,179 +109,159 @@ npm install
 npm start
 ```
 
-### Scripts Disponíveis
-```bash
-# Desenvolvimento
-npm start              # Inicia o Expo
-npm run android        # Executa no Android
-npm run ios           # Executa no iOS
-npm run web           # Executa no navegador
+### **Configuração de Ambiente**
+O arquivo `src/config/environment.ts` contém as configurações da API:
 
-# Testes
-npm test              # Executa os testes
-npm run test:watch     # Executa os testes em modo watch
-
-# Build
-npm run build:android # Build para Android
-npm run build:ios     # Build para iOS
+```typescript
+export const ENV = {
+  // Para desenvolvimento local
+  // BASE_URL: 'http://localhost:8080/api',
+  
+  // Para produção (Railway)
+  BASE_URL: 'https://teste-back-soffia-production.up.railway.app/api',
+  
+  DEBUG: __DEV__,
+  REQUEST_TIMEOUT: 10000,
+  MAX_RETRIES: 3,
+  RETRY_DELAY: 1000,
+};
 ```
-
-## 🧪 Testes
-
-O projeto inclui testes unitários para componentes e utilitários:
-
-```bash
-# Executar todos os testes
-npm test
-
-# Executar testes em modo watch
-npm run test:watch
-
-# Ver cobertura de testes
-npm test -- --coverage
-```
-
-### Estrutura dos Testes
-- **Componentes**: Testes de renderização e interação
-- **Utilitários**: Testes de funções puras
-- **Hooks**: Testes de lógica de estado
-- **Redux**: Testes de actions e reducers
-
-## 📚 Storybook
-
-Documentação interativa dos componentes:
-
-```bash
-npm run storybook
-```
-
-### Stories Disponíveis
-- **CustomButton**: Variações do botão
-- **CustomInput**: Diferentes tipos de input
-- **PostCard**: Card de post com estados
-
-## 🔧 Configuração
-
-### Variáveis de Ambiente
-Crie um arquivo `.env` na raiz do projeto:
-
-```env
-API_BASE_URL=https://jsonplaceholder.typicode.com
-STORAGE_PREFIX=@app:
-```
-
-### Configuração do Android Studio
-1. Instale o Android Studio
-2. Configure o SDK do Android
-3. Crie um emulador Android
-4. Execute `npm run android`
-
-## 📱 Funcionalidades Detalhadas
-
-### Autenticação
-- Login com email e senha
-- Registro de novos usuários
-- Persistência de sessão com AsyncStorage
-- Validação de formulários
-
-### Posts
-- Listagem paginada de posts
-- Criação de novos posts
-- Edição e exclusão de posts
-- Sistema de likes
-- Busca por título e conteúdo
-
-### Favoritos
-- Adicionar/remover posts dos favoritos
-- Persistência local com AsyncStorage
-- Sincronização com o estado global
-
-### Busca
-- Busca em tempo real
-- Debounce para otimização
-- Busca por título, conteúdo e autor
-- Resultados paginados
-
-### Offline
-- Suporte offline-first
-- Cache de posts no AsyncStorage
-- Sincronização quando online
-- Indicadores de conectividade
 
 ## 🎨 Design System
 
-### Cores
-- **Primary**: #007AFF (azul)
-- **Secondary**: #5856D6 (roxo)
-- **Success**: #34C759 (verde)
-- **Warning**: #FF9500 (laranja)
-- **Error**: #FF3B30 (vermelho)
-- **Background**: #F2F2F7 (cinza claro)
-- **Surface**: #FFFFFF (branco)
+### **Cores**
+```typescript
+export const COLORS = {
+  primary: '#007AFF',      // Azul iOS
+  secondary: '#5856D6',    // Roxo
+  success: '#34C759',       // Verde
+  warning: '#FF9500',      // Laranja
+  error: '#FF3B30',        // Vermelho
+  background: '#F2F2F7',   // Fundo claro
+  surface: '#FFFFFF',      // Superfícies
+  text: '#000000',         // Texto principal
+  textSecondary: '#8E8E93', // Texto secundário
+};
+```
 
-### Tipografia
-- **Títulos**: 18-32px, peso bold
-- **Subtítulos**: 16px, peso 600
-- **Texto**: 14-16px, peso normal
-- **Caption**: 12px, peso normal
+### **Espaçamentos**
+```typescript
+export const SPACING = {
+  xs: 4,   // Muito pequeno
+  sm: 8,   // Pequeno
+  md: 16,  // Médio
+  lg: 24,  // Grande
+  xl: 32,  // Muito grande
+  xxl: 48, // Extra grande
+};
+```
 
-### Espaçamento
-- **xs**: 4px
-- **sm**: 8px
-- **md**: 16px
-- **lg**: 24px
-- **xl**: 32px
-- **xxl**: 48px
+## 🔐 Segurança
 
-## 🚀 Otimizações
+### **Autenticação**
+- Tokens JWT armazenados de forma segura no AsyncStorage
+- Validação automática de tokens em cada requisição
+- Logout automático em caso de token inválido
+- Interceptors para renovação automática de tokens
 
-### Performance
-- FlatList para listas grandes
-- Lazy loading de imagens
-- Memoização de componentes
-- Debounce em buscas
-- Paginação eficiente
+### **Validação de Dados**
+- Validação de email com regex
+- Validação de senha com comprimento mínimo
+- Sanitização de inputs do usuário
+- Tratamento de erros da API
 
-### UX
-- Loading states
-- Error handling
-- Feedback visual
-- Animações suaves
-- Gestos intuitivos
+## 📱 Performance
 
-## 📝 Próximos Passos
+### **Otimizações Implementadas**
+- **Debounce na busca** - Evita requisições desnecessárias
+- **Lazy loading** - Carregamento sob demanda de componentes
+- **Memoização** - Uso de useMemo e useCallback onde necessário
+- **Paginação** - Carregamento incremental de posts
+- **Cache local** - AsyncStorage para dados offline
 
-### Melhorias Futuras
-- [ ] Push notifications
-- [ ] Compartilhamento de posts
-- [ ] Modo escuro
-- [ ] Internacionalização
-- [ ] Analytics
-- [ ] Crash reporting
+### **Monitoramento**
+- Logs detalhados para debug
+- Verificação de conectividade
+- Retry automático em caso de falha de rede
+- Estados de loading em todas as operações
 
-### Funcionalidades Avançadas
-- [ ] Upload de imagens
-- [ ] Comentários em posts
-- [ ] Sistema de tags
-- [ ] Filtros avançados
-- [ ] Modo offline completo
+## 🧪 Hooks Customizados
+
+### **useAuth**
+```typescript
+const { user, isAuthenticated, login, register, logout } = useAuth();
+```
+Gerencia todo o ciclo de vida da autenticação.
+
+### **useForm**
+```typescript
+const { values, errors, setValue, isValid } = useForm({
+  email: '',
+  password: ''
+});
+```
+Facilita o gerenciamento de formulários com validação.
+
+### **usePosts**
+```typescript
+const { posts, loadPosts, createPost, isLoading } = usePosts();
+```
+Gerencia a lista de posts com ordenação automática.
+
+### **useFavorites**
+```typescript
+const { favorites, toggleFavorite, isFavorite } = useFavorites();
+```
+Sistema de favoritos com persistência local.
+
+## 🔄 Fluxo de Dados
+
+1. **Autenticação**: Context API → AsyncStorage → API
+2. **Posts**: Redux Store → API → Componentes
+3. **Favoritos**: Local State → AsyncStorage → UI
+4. **Navegação**: React Navigation → TypeScript Types
+
+## 🚀 Deploy
+
+### **Desenvolvimento**
+```bash
+npm start
+```
+
+### **Build para Produção**
+```bash
+# Android
+expo build:android
+
+# iOS
+expo build:ios
+```
+
+### **Deploy no EAS**
+```bash
+# Configurar EAS
+eas build:configure
+
+# Build para produção
+eas build --platform all
+```
 
 ## 🤝 Contribuição
 
 1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-feature`)
+3. Commit suas mudanças (`git commit -m 'feat: adiciona nova feature'`)
+4. Push para a branch (`git push origin feature/nova-feature`)
 5. Abra um Pull Request
 
-## 📄 Licença
+## 📝 Licença
 
 Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
 
-## 👨‍💻 Autor
+## 👨‍💻 Desenvolvedor
 
-Desenvolvido com ❤️ para o teste de frontend.
+Desenvolvido com ❤️ por [Seu Nome]
 
 ---
 
-**Nota**: Este é um projeto de demonstração com API fake. Os dados não são persistidos no servidor, mas são simulados localmente para demonstrar as funcionalidades.
+**Nota**: Este projeto foi desenvolvido como teste técnico, demonstrando conhecimento em React Native, TypeScript, Redux e boas práticas de desenvolvimento mobile.
