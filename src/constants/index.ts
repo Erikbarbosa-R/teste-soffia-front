@@ -42,11 +42,24 @@ export const BORDER_RADIUS = {
 };
 
 export const API_ENDPOINTS = {
-  BASE_URL: 'https://jsonplaceholder.typicode.com',
+  BASE_URL: 'https://teste-back-soffia-production.up.railway.app/api',
+  // BASE_URL: 'http://localhost:8080/api', // Para desenvolvimento local
+  HEALTH: '/health',
+  PING: '/ping',
+  AUTH: {
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
+    ME: '/auth/me',
+    LOGOUT: '/auth/logout',
+    REFRESH: '/auth/refresh',
+  },
   POSTS: '/posts',
   USERS: '/users',
-  LOGIN: '/auth/login',
-  REGISTER: '/auth/register',
+  TAGS: '/tags',
+  DASHBOARD: {
+    STATS: '/dashboard/stats',
+    ACTIVITY: '/dashboard/activity',
+  },
 };
 
 export const STORAGE_KEYS = {

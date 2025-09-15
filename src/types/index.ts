@@ -2,20 +2,51 @@
 
 export interface User {
   id: string;
-  name: string;
+  nome: string;
   email: string;
-  avatar?: string;
-  createdAt: string;
+  telefone?: string;
+  is_valid: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Tag {
+  id: string;
+  nome: string;
+  cor: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Comment {
+  id: string;
+  content: string;
+  post_id: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  user?: {
+    id: string;
+    nome: string;
+    email: string;
+    telefone?: string;
+  };
 }
 
 export interface Post {
   id: string;
   title: string;
   content: string;
-  author: User;
-  createdAt: string;
-  updatedAt: string;
-  likes: number;
+  author: {
+    id: string;
+    nome: string;
+    telefone?: string;
+    email: string;
+  };
+  tags: string[];
+  created_at?: string;
+  updated_at?: string;
+  comments?: Comment[];
   isLiked?: boolean;
   isFavorite?: boolean;
 }
@@ -60,14 +91,22 @@ export type TabParamList = {
 
 // Tipos para API
 export interface ApiResponse<T> {
-  data: T;
+  data?: T;
+  message?: string;
+  success?: boolean;
+}
+
+export interface LoginResponse {
+  token: string;
   message: string;
-  success: boolean;
+  user: User;
 }
 
 export interface CreatePostRequest {
   title: string;
   content: string;
+  author: string; // UUID do usuário autor
+  tags?: string[]; // Array de nomes das tags
 }
 
 export interface LoginRequest {
@@ -76,9 +115,30 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  name: string;
+  nome: string;
   email: string;
   password: string;
+  telefone?: string;
+}
+
+export interface CreateCommentRequest {
+  content: string;
+}
+
+export interface DashboardStats {
+  total_users: number;
+  total_posts: number;
+  total_tags: number;
+  total_comments: number;
+  recent_posts: number;
+  active_users: number;
+}
+
+export interface ActivityItem {
+  id: string;
+  type: string;
+  description: string;
+  created_at: string;
 }
 
 // Tipos para componentes
