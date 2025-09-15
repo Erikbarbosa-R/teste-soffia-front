@@ -72,12 +72,21 @@ export const slugify = (text: string): string => {
 export const searchPosts = (posts: any[], query: string): any[] => {
   if (!query.trim()) return posts;
   
-  const searchTerm = query.toLowerCase();
-  return posts.filter(post => 
-    post.title.toLowerCase().includes(searchTerm) ||
-    post.content.toLowerCase().includes(searchTerm) ||
-    post.author.name.toLowerCase().includes(searchTerm)
-  );
+  const searchTerm = query.toLowerCase().trim();
+  return posts.filter(post => {
+    // Buscar no título
+    const titleMatch = post.title?.toLowerCase().includes(searchTerm) || false;
+    
+    // Buscar no conteúdo
+    const contentMatch = post.content?.toLowerCase().includes(searchTerm) || false;
+    
+    // Buscar no nome do autor
+    const authorMatch = (post.author?.name || post.author?.nome || '')
+      .toLowerCase().includes(searchTerm) || false;
+    
+    // Retorna true se encontrar em qualquer campo
+    return titleMatch || contentMatch || authorMatch;
+  });
 };
 
 // Utilitários de performance
