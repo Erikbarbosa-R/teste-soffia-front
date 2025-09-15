@@ -1,6 +1,7 @@
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Toast from 'react-native-toast-message';
 import { AppProvider } from './src/context/AppContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
 import { KeyboardProvider } from './src/navigation/AppNavigator';
@@ -15,6 +16,7 @@ export default function App() {
           <KeyboardProvider>
             <StatusBar style="dark" backgroundColor={COLORS.surface} />
             <AppNavigator />
+            <Toast />
           </KeyboardProvider>
         </FavoritesProvider>
       </AppProvider>

@@ -211,19 +211,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     navigation.navigate('Profile', { userId });
   };
 
-  const handleEditPost = (post: any) => {
-    setShowPostMenu(null);
-    navigation.navigate('CreatePost', { 
-      editMode: true, 
-      postId: post.id, 
-      postData: {
-        title: post.title,
-        content: post.content,
-        tags: post.tags || []
-      }
-    });
-  };
-
   const handleDeletePost = async (postId: string) => {
     try {
       console.log('HomeScreen - Deletando post:', postId);
@@ -300,9 +287,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         <>
           <MenuOverlay onPress={() => setShowPostMenu(null)} />
           <MenuContainer>
-            <MenuItem onPress={() => handleEditPost(item)}>
-              <MenuItemText>Editar</MenuItemText>
-            </MenuItem>
             <MenuItem onPress={() => handleDeletePost(item.id)}>
               <MenuItemTextDanger>Deletar</MenuItemTextDanger>
             </MenuItem>

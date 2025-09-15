@@ -60,8 +60,8 @@ export const usePosts = () => {
       
       // Se o backend não suportar ordenação, ordenar localmente
       const sortedPosts = postsArray.sort((a, b) => {
-        const dateA = new Date(a.created_at || a.createdAt || 0);
-        const dateB = new Date(b.created_at || b.createdAt || 0);
+        const dateA = new Date(a.created_at || 0);
+        const dateB = new Date(b.created_at || 0);
         return dateB.getTime() - dateA.getTime(); // Ordem decrescente (mais novos primeiro)
       });
       
@@ -100,6 +100,67 @@ export const usePosts = () => {
     }
   }, []);
 
+  const updatePost = useCallback(async (postId: string, postData: { title: string; content: string; author: string; tags?: string[] }) => {
+    try {
+      console.log('usePosts - Iniciando atualização do post:', postId);
+      console.log('usePosts - Dados para atualização:', postData);
+      
+      const updatedPost = await apiService.updatePost(postId, postData);
+      console.log('usePosts - Post atualizado da API:', updatedPost);
+      console.log('usePosts - Tipo do post atualizado:', typeof updatedPost);
+      console.log('usePosts - Post tem ID?', !!updatedPost?.id);
+      console.log('usePosts - Post tem título?', !!updatedPost?.title);
+      
+      // Verificar se o post foi atualizado corretamente
+      if (!updatedPost || !updatedPost.id) {
+        console.error('usePosts - Post não foi atualizado corretamente:', updatedPost);
+        throw new Error('Post não foi atualizado corretamente');
+      }
+      
+      // Atualizar o post na lista local
+      setPosts(prev => {
+        const updatedPosts = prev.map(post => {
+          if (post.id === postId) {
+            console.log('usePosts - Atualizando post na lista:', post.id);
+            const newPost = { 
+              ...post, 
+              title: updatedPost.title || postData.title,
+              content: updatedPost.content || postData.content,
+              tags: updatedPost.tags || postData.tags || post.tags,
+              updated_at: new Date().toISOString()
+            };
+            console.log('usePosts - Post atualizado na lista:', newPost.title);
+            return newPost;
+          }
+          return post;
+        });
+        
+        console.log('usePosts - Lista atualizada:', updatedPosts.length, 'posts');
+        return updatedPosts;
+      });
+      
+      // Forçar reload dos posts para garantir sincronização
+      console.log('usePosts - Forçando reload dos posts...');
+      setTimeout(async () => {
+        try {
+          await loadPosts();
+          console.log('usePosts - Posts recarregados após atualização');
+        } catch (reloadError) {
+          console.error('usePosts - Erro ao recarregar posts:', reloadError);
+        }
+      }, 500);
+      
+      console.log('usePosts - Post atualizado com sucesso');
+      return updatedPost;
+    } catch (err: any) {
+      console.error('usePosts - Erro ao atualizar post:', err);
+      console.error('usePosts - Erro completo:', JSON.stringify(err, null, 2));
+      console.error('usePosts - Erro message:', err.message);
+      console.error('usePosts - Erro stack:', err.stack);
+      throw err;
+    }
+  }, [loadPosts]);
+
   const deletePost = useCallback(async (postId: string) => {
     try {
       await apiService.deletePost(postId);
@@ -115,6 +176,7 @@ export const usePosts = () => {
     error,
     loadPosts,
     createPost,
+    updatePost,
     deletePost,
   };
 };

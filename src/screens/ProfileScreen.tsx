@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Text } from 'react-native';
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavoritesContext } from '../context/FavoritesContext';
@@ -183,17 +183,56 @@ interface ProfileScreenProps {
 }
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, route }) => {
+  // Verificar se route.params existe
+  if (!route?.params?.userId) {
+    console.error('ProfileScreen - userId não encontrado nos parâmetros');
+    return (
+      <ProfileContainer>
+        <Header>
+          <BackButton onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={24} color="#000000" />
+          </BackButton>
+          <HeaderTitle>Erro</HeaderTitle>
+        </Header>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#FF3B30', fontSize: 16 }}>
+            Erro: ID do usuário não encontrado
+          </Text>
+        </View>
+      </ProfileContainer>
+    );
+  }
+
   const { userId } = route.params;
-  const { favorites, toggleFavorite, isFavorite } = useFavoritesContext();
+  
+  // Proteção para evitar crash se o contexto não estiver disponível
+  let favoritesContext;
+  try {
+    favoritesContext = useFavoritesContext();
+  } catch (error) {
+    console.error('ProfileScreen - Erro ao acessar contexto de favoritos:', error);
+    // Valores padrão para evitar crash
+    favoritesContext = {
+      favorites: [],
+      toggleFavorite: () => {},
+      isFavorite: () => false,
+      addFavorite: () => {},
+      removeFavorite: () => {}
+    };
+  }
+  
+  const { favorites, toggleFavorite, isFavorite } = favoritesContext;
   const [user, setUser] = useState<any>(null);
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log('ProfileScreen - userId recebido:', userId);
     loadUserProfile();
   }, [userId]);
 
   const loadUserProfile = async () => {
+    console.log('ProfileScreen - Iniciando carregamento do perfil...');
     setIsLoading(true);
     try {
       // Simular dados do usuário (em uma API real, você faria uma chamada específica)
@@ -207,15 +246,55 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, route 
         phone: '(85) 9 9999-9999'
       };
       
+      console.log('ProfileScreen - Usuário mockado:', mockUser);
       setUser(mockUser);
 
-      // Carregar posts do usuário
-      const allPosts = await apiService.getPosts();
-      const userPostsData = allPosts.filter((post: any) => post.author.id === userId);
+      // Carregar posts reais do usuário
+      console.log('ProfileScreen - Carregando posts reais do usuário:', userId);
+      try {
+        const realPosts = await apiService.getUserPosts(userId);
+        console.log('ProfileScreen - Posts reais carregados:', realPosts.length);
+        setUserPosts(realPosts);
+      } catch (apiError) {
+        console.error('ProfileScreen - Erro ao carregar posts reais:', apiError);
+        
+        // Fallback: usar posts mockados se a API falhar
+        console.log('ProfileScreen - Usando posts mockados como fallback...');
+        const mockPosts = [
+          {
+            id: '1',
+            title: 'Primeiro post do usuário',
+            content: 'Este é o primeiro post deste usuário. Conteúdo interessante aqui.',
+            author: {
+              id: userId,
+              name: mockUser.name,
+              username: mockUser.username
+            },
+            created_at: new Date().toISOString(),
+            tags: ['exemplo', 'teste']
+          },
+          {
+            id: '2',
+            title: 'Segundo post do usuário',
+            content: 'Este é o segundo post. Mais conteúdo interessante para mostrar.',
+            author: {
+              id: userId,
+              name: mockUser.name,
+              username: mockUser.username
+            },
+            created_at: new Date().toISOString(),
+            tags: ['exemplo', 'teste']
+          }
+        ];
+        
+        console.log('ProfileScreen - Posts mockados aplicados:', mockPosts.length);
+        setUserPosts(mockPosts);
+      }
       
-      setUserPosts(userPostsData);
     } catch (error) {
-      console.error('Erro ao carregar perfil do usuário:', error);
+      console.error('ProfileScreen - Erro ao carregar perfil do usuário:', error);
+      // Em caso de erro, definir arrays vazios para evitar crash
+      setUserPosts([]);
     } finally {
       setIsLoading(false);
     }
@@ -293,35 +372,43 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, route 
 
         <PostsSection>
           <PostsTitle>Publicações</PostsTitle>
-          {userPosts.map((post) => (
-            <PostCard key={post.id}>
-              <PostHeader>
-                <PostAuthorImage>
-                  <PostAuthorImageText>
-                    {post.author.name.charAt(0).toUpperCase()}
-                  </PostAuthorImageText>
-                </PostAuthorImage>
-                <PostAuthorInfo>
-                  <PostAuthorName>{post.author.name}</PostAuthorName>
-                  <PostAuthorUsername>{post.author.username}</PostAuthorUsername>
-                </PostAuthorInfo>
-                <FavoriteButton onPress={() => handleFavorite(post.id)}>
-                  <Ionicons 
-                    name={isFavorite(post.id) ? "star" : "star-outline"} 
-                    size={20} 
-                    color={isFavorite(post.id) ? "#FFD700" : "#8E8E93"} 
-                  />
-                </FavoriteButton>
-              </PostHeader>
-              <PostTitle>{post.title}</PostTitle>
-              <PostContent>
-                {post.content.length > 100 
-                  ? `${post.content.substring(0, 100)}...` 
-                  : post.content
-                }
-              </PostContent>
-            </PostCard>
-          ))}
+          {userPosts && userPosts.length > 0 ? (
+            userPosts.map((post) => (
+              <PostCard key={post.id}>
+                <PostHeader>
+                  <PostAuthorImage>
+                    <PostAuthorImageText>
+                      {post.author?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </PostAuthorImageText>
+                  </PostAuthorImage>
+                  <PostAuthorInfo>
+                    <PostAuthorName>{post.author?.name || 'Usuário'}</PostAuthorName>
+                    <PostAuthorUsername>{post.author?.username || '@usuario'}</PostAuthorUsername>
+                  </PostAuthorInfo>
+                  <FavoriteButton onPress={() => handleFavorite(post.id)}>
+                    <Ionicons 
+                      name={isFavorite(post.id) ? "star" : "star-outline"} 
+                      size={20} 
+                      color={isFavorite(post.id) ? "#FFD700" : "#8E8E93"} 
+                    />
+                  </FavoriteButton>
+                </PostHeader>
+                <PostTitle>{post.title || 'Título não disponível'}</PostTitle>
+                <PostContent>
+                  {post.content && post.content.length > 100 
+                    ? `${post.content.substring(0, 100)}...` 
+                    : post.content || 'Conteúdo não disponível'
+                  }
+                </PostContent>
+              </PostCard>
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#8E8E93', fontSize: 16 }}>
+                Nenhuma publicação encontrada
+              </Text>
+            </View>
+          )}
         </PostsSection>
       </ProfileContent>
     </ProfileContainer>

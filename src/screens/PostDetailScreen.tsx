@@ -487,22 +487,6 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
     }
   };
 
-  const handleEditPost = () => {
-    if (post) {
-      console.log('Editando post:', post.id);
-      setShowPostMenu(false);
-      navigation.navigate('CreatePost' as any, { 
-        editMode: true, 
-        postId: post.id, 
-        postData: {
-          title: post.title,
-          content: post.content,
-          tags: post.tags || []
-        }
-      });
-    }
-  };
-
   const handleDeletePost = async () => {
     if (post) {
       try {
@@ -715,9 +699,6 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
           <>
             <MenuOverlay onPress={() => setShowPostMenu(false)} />
             <MenuContainer>
-              <MenuItem onPress={handleEditPost}>
-                <MenuItemText>Editar</MenuItemText>
-              </MenuItem>
               <MenuItem onPress={handleDeletePost}>
                 <MenuItemTextDanger>Deletar</MenuItemTextDanger>
               </MenuItem>

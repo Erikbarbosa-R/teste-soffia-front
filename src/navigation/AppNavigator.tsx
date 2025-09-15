@@ -13,9 +13,10 @@ import {
   FavoritesScreen,
   AuthScreen,
   CreatePostScreen,
+  EditPostScreen,
   PostDetailScreen,
-  ProfileScreen,
 } from '../screens';
+import { ProfileScreen } from '../screens/ProfileScreenSimple';
 
 // Contexto do teclado inline
 interface KeyboardContextType {
@@ -155,12 +156,14 @@ const MainStack = () => {
         name="CreatePost" 
         component={CreatePostScreen}
         options={{ 
-          title: 'Nova publicação',
-          headerLeft: ({ onPress }) => (
-            <TouchableOpacity onPress={onPress} style={{ padding: 8 }}>
-              <Ionicons name="close" size={24} color="#000000" />
-            </TouchableOpacity>
-          ),
+          headerShown: false, // Desabilitar header padrão para usar o header customizado
+        }}
+      />
+      <Stack.Screen 
+        name="EditPost" 
+        component={EditPostScreen}
+        options={{ 
+          headerShown: false, // Desabilitar header padrão para usar o header customizado
         }}
       />
       <Stack.Screen 

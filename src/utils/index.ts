@@ -2,6 +2,9 @@ import { Dimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VALIDATION_RULES } from '../constants';
 
+// Exportar funções de toast
+export * from './toast';
+
 // Utilitários de validação
 export const validateEmail = (email: string): boolean => {
   return VALIDATION_RULES.EMAIL_REGEX.test(email);

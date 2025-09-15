@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StatusBar } from 'react-native';
+import Toast from 'react-native-toast-message';
 import styled from 'styled-components/native';
 import { SafeContainer } from '../components';
 import { CustomInput } from '../components';
@@ -9,6 +10,12 @@ import { useForm } from '../hooks';
 import { validateEmail, validatePassword } from '../utils';
 import { useAuthContext } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import { 
+  showErrorToast, 
+  showValidationErrorToast, 
+  showApiErrorToast,
+  showAuthErrorToast 
+} from '../utils';
 
 // Componentes styled específicos para o design das imagens
 const LoginContainer = styled.View`
@@ -64,12 +71,28 @@ const LinkText = styled.Text`
   margin-top: 24px;
 `;
 
+const ErrorContainer = styled.View`
+  background-color: #FFE6E6;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  border-left-width: 4px;
+  border-left-color: #FF3B30;
+`;
+
+const ErrorText = styled.Text`
+  color: #FF3B30;
+  font-size: 14px;
+  text-align: center;
+`;
+
 interface AuthScreenProps {
   navigation: any;
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
   const [isLogin, setIsLogin] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const { login, register, isLoading } = useAuthContext();
 
   const { values, errors, setValue, setFieldTouched, isValid, reset } = useForm({
@@ -80,6 +103,56 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
 
   const handleSubmit = async () => {
     try {
+      setErrorMessage(''); // Limpar erro anterior
+      
+      // Validação de campos obrigatórios para cadastro
+      if (!isLogin) {
+        const validationErrors: string[] = [];
+        
+        if (!values.nome || values.nome.trim() === '') {
+          validationErrors.push('Nome é obrigatório');
+        }
+        
+        if (!values.email || values.email.trim() === '') {
+          validationErrors.push('Email é obrigatório');
+        }
+        
+        if (!values.password || values.password.trim() === '') {
+          validationErrors.push('Senha é obrigatória');
+        }
+        
+        // Se há erros de validação, mostrar e parar
+        if (validationErrors.length > 0) {
+          const errorMsg = validationErrors.join('. ') + '.';
+          setErrorMessage(errorMsg);
+          
+          showValidationErrorToast(validationErrors);
+          return;
+        }
+      }
+      
+      // Validação de campos obrigatórios para login
+      if (isLogin) {
+        const validationErrors: string[] = [];
+        
+        if (!values.email || values.email.trim() === '') {
+          validationErrors.push('Email é obrigatório');
+        }
+        
+        if (!values.password || values.password.trim() === '') {
+          validationErrors.push('Senha é obrigatória');
+        }
+        
+        // Se há erros de validação, mostrar e parar
+        if (validationErrors.length > 0) {
+          const errorMsg = validationErrors.join('. ') + '.';
+          setErrorMessage(errorMsg);
+          
+          showValidationErrorToast(validationErrors);
+          return;
+        }
+      }
+      
       if (isLogin) {
         await login(
           values.email,
@@ -92,14 +165,44 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
           password: values.password,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro na autenticação:', error);
-      // Aqui você pode mostrar um alerta ou toast com o erro
+      
+      // Tratar diferentes tipos de erro
+      let errorMsg = '';
+      
+      if (error?.response?.status === 401) {
+        errorMsg = 'Email ou senha incorretos. Verifique suas credenciais.';
+      } else if (error?.response?.status === 404) {
+        errorMsg = 'Usuário não encontrado. Verifique seu email.';
+      } else if (error?.response?.status === 400) {
+        if (error?.response?.data?.message?.includes('email')) {
+          errorMsg = 'Email inválido. Verifique o formato do email.';
+        } else if (error?.response?.data?.message?.includes('senha')) {
+          errorMsg = 'Senha incorreta. Tente novamente.';
+        } else {
+          errorMsg = 'Dados inválidos. Verifique as informações.';
+        }
+      } else if (error?.response?.status === 409) {
+        errorMsg = 'Este email já está cadastrado. Tente fazer login.';
+      } else if (error?.message?.includes('Network')) {
+        errorMsg = 'Erro de conexão. Verifique sua internet.';
+      } else {
+        errorMsg = isLogin 
+          ? 'Erro ao fazer login. Tente novamente.' 
+          : 'Erro ao criar conta. Tente novamente.';
+      }
+      
+      setErrorMessage(errorMsg);
+      
+      // Mostrar toast também
+      showApiErrorToast(error);
     }
   };
 
   const handleToggleMode = () => {
     setIsLogin(!isLogin);
+    setErrorMessage(''); // Limpar erro ao trocar de modo
     reset();
   };
 
@@ -114,6 +217,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
         <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
         <LoginContainer>
           <LoginTitle>LOGIN</LoginTitle>
+          
+          {errorMessage ? (
+            <ErrorContainer>
+              <ErrorText>{errorMessage}</ErrorText>
+            </ErrorContainer>
+          ) : null}
           
           <CustomInput
             label="E-mail"
@@ -164,6 +273,12 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
         </RegisterHeader>
 
         <RegisterContent>
+          {errorMessage ? (
+            <ErrorContainer>
+              <ErrorText>{errorMessage}</ErrorText>
+            </ErrorContainer>
+          ) : null}
+          
           <CustomInput
             label="Nome de usuário"
             placeholder="Nome de usuário"

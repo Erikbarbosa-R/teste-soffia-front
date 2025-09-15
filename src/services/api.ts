@@ -51,18 +51,28 @@ class ApiService {
       url, 
       method: config.method || 'GET', 
       hasToken: !!this.token,
-      body: config.body 
+      tokenPreview: this.token ? this.token.substring(0, 20) + '...' : 'N/A',
+      body: config.body,
+      headers: config.headers
     });
 
     try {
       const response = await fetch(url, config);
       
       console.log('API Response Status:', response.status, response.statusText);
+      console.log('API Response Headers:', Object.fromEntries(response.headers.entries()));
       
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error Response:', errorData);
-        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('API Error Response Text:', errorText);
+        
+        try {
+          const errorData = JSON.parse(errorText);
+          console.error('API Error Response JSON:', errorData);
+          throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+        } catch (parseError) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+        }
       }
 
       // Se a resposta for 204 (No Content), retorna void
@@ -70,9 +80,17 @@ class ApiService {
         return {} as T;
       }
 
-      const data = await response.json();
-      console.log('API Response Data:', data);
-      return data;
+      const responseText = await response.text();
+      console.log('API Response Text:', responseText);
+      
+      try {
+        const data = JSON.parse(responseText);
+        console.log('API Response Data:', data);
+        return data;
+      } catch (parseError) {
+        console.error('API Response não é JSON válido:', responseText);
+        throw new Error('Resposta da API não é JSON válido');
+      }
     } catch (error) {
       console.error('API Request Error:', error);
       throw error;
@@ -228,6 +246,31 @@ class ApiService {
     return response?.data || response;
   }
 
+  // Buscar posts de um usuário específico
+  async getUserPosts(userId: string): Promise<Post[]> {
+    console.log('ApiService - Buscando posts do usuário:', userId);
+    
+    try {
+      const response = await this.request<any>(`${API_ENDPOINTS.POSTS}/user/${userId}`);
+      
+      // A API retorna { data: Post[], message: string }
+      const posts = response?.data || [];
+      console.log('ApiService - Posts do usuário recebidos:', posts.length);
+      
+      return posts;
+    } catch (error) {
+      console.error('Erro ao buscar posts do usuário:', error);
+      
+      // Fallback: buscar todos os posts e filtrar localmente
+      console.log('ApiService - Fallback: buscando todos os posts e filtrando...');
+      const allPosts = await this.getPosts();
+      const userPosts = allPosts.filter(post => post.author.id === userId);
+      
+      console.log('ApiService - Posts filtrados localmente:', userPosts.length);
+      return userPosts;
+    }
+  }
+
   async createPost(postData: CreatePostRequest): Promise<Post> {
     console.log('ApiService - Criando post com dados:', postData);
     console.log('ApiService - Token atual:', this.token ? 'Presente' : 'Ausente');
@@ -255,10 +298,50 @@ class ApiService {
   }
 
   async updatePost(id: string, postData: Partial<CreatePostRequest>): Promise<Post> {
-    return this.request<Post>(`${API_ENDPOINTS.POSTS}/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(postData),
-    });
+    console.log('ApiService - Atualizando post:', id, postData);
+    console.log('ApiService - Token atual:', this.token ? 'Presente' : 'Ausente');
+    console.log('ApiService - URL da requisição:', `${API_ENDPOINTS.POSTS}/${id}`);
+    console.log('ApiService - Payload sendo enviado:', JSON.stringify(postData));
+    
+    try {
+      const response = await this.request<any>(`${API_ENDPOINTS.POSTS}/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(postData),
+      });
+      
+      console.log('ApiService - Resposta da atualização:', response);
+      console.log('ApiService - Tipo da resposta:', typeof response);
+      console.log('ApiService - Response.data:', response?.data);
+      console.log('ApiService - Response.message:', response?.message);
+      
+      // A API retorna { message: string, data: Post } - conforme visto no Postman
+      if (response?.data && response.data.id) {
+        console.log('ApiService - Post atualizado (estrutura data):', response.data);
+        return response.data;
+      } else if (response?.message === 'Post atualizado com sucesso.' && response?.data) {
+        // Estrutura específica do Postman: { message: "Post atualizado com sucesso.", data: Post }
+        console.log('ApiService - Post atualizado (estrutura Postman):', response.data);
+        return response.data;
+      } else if (response?.id && response?.title) {
+        // Estrutura: Post direto
+        console.log('ApiService - Post atualizado (estrutura direta):', response);
+        return response;
+      } else if (response?.message === 'Post não encontrado.') {
+        throw new Error('Post não encontrado');
+      } else if (response?.message) {
+        // Resposta com mensagem mas sem dados
+        console.log('ApiService - Resposta com mensagem:', response.message);
+        throw new Error(response.message);
+      } else {
+        // Resposta vazia ou inválida
+        console.error('ApiService - Resposta inválida:', response);
+        throw new Error('Resposta inválida da API');
+      }
+    } catch (error: any) {
+      console.error('ApiService - Erro na atualização:', error);
+      console.error('ApiService - Erro completo:', JSON.stringify(error, null, 2));
+      throw error;
+    }
   }
 
   async deletePost(id: string): Promise<void> {
