@@ -29,14 +29,14 @@ export const PostCard: React.FC<PostCardProps> = ({
     <Card onPress={onPress}>
       <Row marginBottom={12}>
         <UserAvatar 
-          name={post.author.name} 
-          avatar={post.author.avatar} 
+          name={post.author.nome} 
+          avatar={undefined} 
           size={40} 
           onPress={onProfilePress}
         />
         <Column style={{ flex: 1, marginLeft: 12 }}>
-          <Text weight="600" size={16}>{post.author.name}</Text>
-          <Caption>{formatDate(post.createdAt)}</Caption>
+          <Text weight="600" size={16}>{post.author.nome}</Text>
+          <Caption>{formatDate(post.created_at || new Date().toISOString())}</Caption>
         </Column>
         {showActions && (
           <Row>
@@ -71,7 +71,7 @@ export const PostCard: React.FC<PostCardProps> = ({
               onPress={onLike}
             />
             <Text size={14} color={COLORS.textSecondary} style={{ marginLeft: 4 }}>
-              {post.likes}
+              0
             </Text>
           </Row>
           

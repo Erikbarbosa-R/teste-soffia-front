@@ -33,11 +33,11 @@ export const Column = styled.View<{ alignItems?: string; marginBottom?: number }
 `;
 
 // Componentes de texto
-export const Title = styled.Text<{ color?: string; size?: number; weight?: string }>`
+export const Title = styled.Text<{ color?: string; size?: number; weight?: string; marginBottom?: number }>`
   font-size: ${props => props.size || FONT_SIZES.xl}px;
   font-weight: ${props => props.weight || 'bold'};
   color: ${props => props.color || COLORS.text};
-  margin-bottom: ${SPACING.sm}px;
+  margin-bottom: ${props => props.marginBottom || SPACING.sm}px;
 `;
 
 export const Subtitle = styled.Text<{ color?: string; size?: number }>`
@@ -47,10 +47,11 @@ export const Subtitle = styled.Text<{ color?: string; size?: number }>`
   margin-bottom: ${SPACING.xs}px;
 `;
 
-export const Text = styled.Text<{ color?: string; size?: number; weight?: string }>`
+export const Text = styled.Text<{ color?: string; size?: number; weight?: string; marginBottom?: number }>`
   font-size: ${props => props.size || FONT_SIZES.md}px;
   font-weight: ${props => props.weight || 'normal'};
   color: ${props => props.color || COLORS.text};
+  margin-bottom: ${props => props.marginBottom || 0}px;
 `;
 
 export const Caption = styled.Text<{ color?: string }>`
@@ -121,7 +122,7 @@ export const ErrorText = styled.Text`
 `;
 
 // Componentes de card
-export const Card = styled.View<{ padding?: number; marginBottom?: number }>`
+export const Card = styled.TouchableOpacity<{ padding?: number; marginBottom?: number }>`
   background-color: ${COLORS.surface};
   border-radius: ${BORDER_RADIUS.lg}px;
   padding: ${props => props.padding || SPACING.md}px;
@@ -155,7 +156,7 @@ export const Avatar = styled.Image<{ size?: number }>`
   background-color: ${COLORS.border};
 `;
 
-export const AvatarContainer = styled.View<{ size?: number }>`
+export const AvatarContainer = styled.TouchableOpacity<{ size?: number }>`
   width: ${props => props.size || 40}px;
   height: ${props => props.size || 40}px;
   border-radius: ${props => (props.size || 40) / 2}px;

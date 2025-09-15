@@ -6,6 +6,7 @@ export { UserAvatar } from './UserAvatar';
 export { CustomIconButton } from './CustomIconButton';
 export { PostCard } from './PostCard';
 export { PostList } from './PostList';
+export { AuthLoading } from './AuthLoading';
 
 // Componentes styled
 export * from './styled';
