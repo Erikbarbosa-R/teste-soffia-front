@@ -157,8 +157,7 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
 
   const loadPosts = async () => {
     try {
-      const response = await apiService.getPosts(1, 10, '');
-      const postsData = response?.data?.posts || [];
+      const postsData = await apiService.getPosts();
       setAllPosts(Array.isArray(postsData) ? postsData : []);
     } catch (error) {
       console.error('Erro ao carregar posts:', error);
@@ -190,12 +189,12 @@ export const FavoritesScreen: React.FC<FavoritesScreenProps> = ({ navigation }) 
         <PostHeader>
           <ProfileImage>
             <ProfileImageText>
-              {item.author.name.charAt(0).toUpperCase()}
+              {item.author?.name?.charAt(0)?.toUpperCase() || '?'}
             </ProfileImageText>
           </ProfileImage>
           <ProfileInfo>
-            <ProfileName>{item.author.name}</ProfileName>
-            <ProfileUsername>@{item.author.name.toLowerCase().replace(/\s+/g, '')}</ProfileUsername>
+            <ProfileName>{item.author?.name || 'Autor Desconhecido'}</ProfileName>
+            <ProfileUsername>@{item.author?.name?.toLowerCase().replace(/\s+/g, '') || 'usuario'}</ProfileUsername>
           </ProfileInfo>
           <FavoriteButton onPress={() => handleFavorite(item.id)}>
             <Ionicons 

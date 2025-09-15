@@ -175,6 +175,68 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation, route })
   
   const searchType = route?.params?.searchType || 'all';
 
+  const handleSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setHasSearched(true);
+    
+    try {
+      let postsData: any[] = [];
+      
+      if (searchType === 'favorites') {
+        // Para busca em favoritos, primeiro buscar todos os posts e filtrar
+        const allPosts = await apiService.getPosts();
+        postsData = allPosts.filter((post: any) => favorites.includes(post.id));
+      } else {
+        // Para busca geral, buscar todos os posts e filtrar localmente
+        // Isso garante que a busca funcione tanto no título quanto no conteúdo
+        postsData = await apiService.getPosts();
+      }
+
+      // Sempre filtrar localmente para garantir busca completa
+      const normalizedQuery = query.toLowerCase().trim();
+      const filteredPosts = postsData.filter((post: any) => {
+        // Buscar no título
+        const titleMatch = post.title?.toLowerCase().includes(normalizedQuery) || false;
+        
+        // Buscar no conteúdo
+        const contentMatch = post.content?.toLowerCase().includes(normalizedQuery) || false;
+        
+        // Buscar no nome do autor
+        const authorMatch = (post.author?.nome || post.author?.name || '')
+          .toLowerCase().includes(normalizedQuery) || false;
+        
+        // Debug temporário
+        if (titleMatch || contentMatch || authorMatch) {
+          console.log('Post encontrado:', {
+            title: post.title,
+            content: post.content?.substring(0, 50) + '...',
+            author: post.author?.nome || post.author?.name,
+            query: normalizedQuery,
+            titleMatch,
+            contentMatch,
+            authorMatch
+          });
+        }
+        
+        // Retorna true se encontrar em qualquer campo
+        return titleMatch || contentMatch || authorMatch;
+      });
+
+      setSearchResults(filteredPosts);
+    } catch (error) {
+      console.error('SearchScreen - Erro na busca:', error);
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchType, favorites]);
+
   // Debounce para busca automática
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -193,45 +255,6 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation, route })
     navigation.goBack();
   };
 
-  const handleSearch = useCallback(async (query: string) => {
-    console.log('SearchScreen - Iniciando busca com query:', query);
-    console.log('SearchScreen - Tipo de busca:', searchType);
-    
-    if (!query.trim()) {
-      console.log('SearchScreen - Query vazio, limpando resultados');
-      setSearchResults([]);
-      setHasSearched(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setHasSearched(true);
-    
-    try {
-      console.log('SearchScreen - Chamando API com query:', query.trim());
-      const response = await apiService.getPosts(1, 50, query.trim());
-      console.log('SearchScreen - Resposta da API:', response);
-      
-      let postsData = response?.data?.posts || [];
-      console.log('SearchScreen - Posts encontrados antes do filtro:', postsData.length);
-      
-      // Se for busca apenas em favoritos, filtrar pelos favoritos
-      if (searchType === 'favorites') {
-        postsData = postsData.filter(post => favorites.includes(post.id));
-        console.log('SearchScreen - Posts após filtro de favoritos:', postsData.length);
-        console.log('SearchScreen - Favoritos atuais:', favorites);
-      }
-      
-      console.log('SearchScreen - Posts finais:', postsData.length);
-      setSearchResults(Array.isArray(postsData) ? postsData : []);
-    } catch (error) {
-      console.error('SearchScreen - Erro ao buscar posts:', error);
-      setSearchResults([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [searchType, favorites]);
-
   const handleClearSearch = () => {
     setSearchQuery('');
     setSearchResults([]);
@@ -242,15 +265,15 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation, route })
     console.log('SearchScreen - Testando API...');
     console.log('SearchScreen - Tipo de busca:', searchType);
     try {
-      const response = await apiService.getPosts(1, 50, '');
+      const response = await apiService.getPosts();
       console.log('SearchScreen - Teste API - Resposta:', response);
-      console.log('SearchScreen - Teste API - Posts:', response?.data?.posts);
+      console.log('SearchScreen - Teste API - Posts:', response);
       
-      let postsData = response?.data?.posts || [];
+      let postsData = response || [];
       
       // Se for busca apenas em favoritos, filtrar pelos favoritos
       if (searchType === 'favorites') {
-        postsData = postsData.filter(post => favorites.includes(post.id));
+        postsData = postsData.filter((post: any) => favorites.includes(post.id));
         console.log('SearchScreen - Teste API - Posts após filtro de favoritos:', postsData.length);
         console.log('SearchScreen - Teste API - Favoritos atuais:', favorites);
       }
@@ -279,12 +302,12 @@ export const SearchScreen: React.FC<SearchScreenProps> = ({ navigation, route })
         <PostHeader>
           <ProfileImage>
             <ProfileImageText>
-              {item.author.name.charAt(0).toUpperCase()}
+              {item.author?.name?.charAt(0)?.toUpperCase() || '?'}
             </ProfileImageText>
           </ProfileImage>
           <ProfileInfo>
-            <ProfileName>{item.author.name}</ProfileName>
-            <ProfileUsername>@{item.author.name.toLowerCase().replace(/\s+/g, '')}</ProfileUsername>
+            <ProfileName>{item.author?.name || 'Autor Desconhecido'}</ProfileName>
+            <ProfileUsername>@{item.author?.name?.toLowerCase().replace(/\s+/g, '') || 'usuario'}</ProfileUsername>
           </ProfileInfo>
           <FavoriteButton onPress={() => handleFavorite(item.id)}>
             <Ionicons 

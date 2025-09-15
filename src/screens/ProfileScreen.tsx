@@ -210,8 +210,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation, route 
       setUser(mockUser);
 
       // Carregar posts do usuário
-      const response = await apiService.getPosts(1, 100, '');
-      const allPosts = response?.data?.posts || [];
+      const allPosts = await apiService.getPosts();
       const userPostsData = allPosts.filter((post: any) => post.author.id === userId);
       
       setUserPosts(userPostsData);

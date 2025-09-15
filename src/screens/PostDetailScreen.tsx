@@ -3,10 +3,13 @@ import { View, ScrollView, TouchableOpacity, TextInput, Platform, KeyboardAvoidi
 import styled from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavoritesContext } from '../context/FavoritesContext';
+import { useAuthContext } from '../context/AuthContext';
 import apiService from '../services/api';
+import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Componentes styled para o design da tela de detalhes
 const DetailContainer = styled.View`
@@ -44,11 +47,13 @@ const FavoriteButton = styled.TouchableOpacity`
 
 const PostSection = styled.View`
   margin-bottom: 32px;
+  margin-top: 16px;
 `;
 
 const AuthorSection = styled.View`
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 16px;
 `;
 
@@ -102,7 +107,6 @@ const PostContent = styled.Text`
 
 const CommentsSection = styled.View`
   margin-top: 12px;
- 
   padding-top: 12px;
 `;
 
@@ -138,8 +142,8 @@ const CommentsTitle = styled.Text`
   font-weight: bold;
   color: #000000;
   text-align: left;
-  margin-top: 8px;
-  margin-bottom: 12px;
+  margin-top: 1px;
+  margin-bottom: 2px;
   width: 350px;
   height: 27px;
   line-height: 20px;
@@ -155,6 +159,7 @@ const CommentItem = styled.View`
 const CommentHeader = styled.View`
   flex-direction: row;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 2px;
 `;
 
@@ -267,6 +272,54 @@ const SendButton = styled.TouchableOpacity`
   z-index: 20;
 `;
 
+const MenuButton = styled.TouchableOpacity`
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  align-items: center;
+`;
+
+const MenuOverlay = styled.TouchableOpacity`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: transparent;
+  z-index: 10;
+`;
+
+const MenuContainer = styled.View`
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  background-color: #FFFFFF;
+  border-radius: 8px;
+  shadow-color: #000;
+  shadow-offset: 0px 2px;
+  shadow-opacity: 0.25;
+  shadow-radius: 4px;
+  elevation: 5;
+  z-index: 20;
+  min-width: 120px;
+`;
+
+const MenuItem = styled.TouchableOpacity`
+  padding: 12px 16px;
+  border-bottom-width: 1px;
+  border-bottom-color: #E5E5EA;
+`;
+
+const MenuItemText = styled.Text`
+  font-size: 16px;
+  color: #000000;
+`;
+
+const MenuItemTextDanger = styled.Text`
+  font-size: 16px;
+  color: #FF3B30;
+`;
+
 interface PostDetailScreenProps {
   navigation: StackNavigationProp<RootStackParamList, 'PostDetail'>;
   route: RouteProp<RootStackParamList, 'PostDetail'>;
@@ -275,11 +328,14 @@ interface PostDetailScreenProps {
 export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, route }) => {
   const { postId } = route.params;
   const { favorites, toggleFavorite, isFavorite } = useFavoritesContext();
+  const { user } = useAuthContext();
   const [post, setPost] = useState<any>(null);
   const [comments, setComments] = useState<any[]>([]);
   const [newComment, setNewComment] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isInputFocused, setIsInputFocused] = useState(false);
+  const [showPostMenu, setShowPostMenu] = useState(false);
+  const [showCommentMenu, setShowCommentMenu] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
   const inputPositionAnimation = useRef(new Animated.Value(0)).current;
@@ -288,6 +344,15 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   useEffect(() => {
     loadPostDetails();
   }, [postId]);
+
+  // Recarregar comentários quando voltar à tela
+  useFocusEffect(
+    React.useCallback(() => {
+      if (post) {
+        loadComments();
+      }
+    }, [post])
+  );
 
   // Configurar o botão de voltar do celular para desfocar o input
   useEffect(() => {
@@ -309,39 +374,75 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
   const loadPostDetails = async () => {
     setIsLoading(true);
     try {
-      // Carregar todos os posts para encontrar o post específico
-      const response = await apiService.getPosts(1, 100, '');
-      const postsData = response?.data?.posts || [];
-      const foundPost = postsData.find((p: any) => p.id === postId);
+      // Carregar o post específico com seus comentários
+      const postData = await apiService.getPost(postId);
+      console.log('PostDetailScreen - Post carregado:', postData);
       
-      if (foundPost) {
-        setPost(foundPost);
-        // Simular comentários (em uma API real, você faria uma chamada separada)
-        setComments([
-          {
-            id: '1',
-            author: {
-              name: 'Maria Silva',
-              username: '@mariasilva'
-            },
-            content: 'Muito interessante este post! Gostei bastante da abordagem.',
-            createdAt: '2024-01-15T10:30:00Z'
-          },
-          {
-            id: '2',
-            author: {
-              name: 'João Santos',
-              username: '@joaosantos'
-            },
-            content: 'Concordo totalmente com o que foi dito aqui. Parabéns pelo conteúdo!',
-            createdAt: '2024-01-15T11:15:00Z'
-          }
-        ]);
+      if (postData) {
+        setPost(postData);
+        // Os comentários vêm junto com o post
+        const comments = postData.comments || [];
+        setComments(comments);
+        console.log('PostDetailScreen - Comentários carregados:', comments.length);
+        // Salvar no AsyncStorage como backup
+        await saveCommentsToStorage(comments);
       }
     } catch (error) {
       console.error('Erro ao carregar detalhes do post:', error);
+      // Se der erro, carregar do AsyncStorage
+      await loadCommentsFromStorage();
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadComments = async () => {
+    try {
+      // Carregar o post específico com seus comentários
+      const postData = await apiService.getPost(postId);
+      console.log('PostDetailScreen - Post recarregado:', postData);
+      
+      if (postData) {
+        // Os comentários vêm junto com o post
+        const comments = postData.comments || [];
+        setComments(comments);
+        console.log('PostDetailScreen - Comentários recarregados:', comments.length);
+        // Salvar no AsyncStorage como backup
+        await saveCommentsToStorage(comments);
+      }
+    } catch (commentError) {
+      console.error('Erro ao recarregar comentários:', commentError);
+      // Se der erro, carregar do AsyncStorage
+      console.log('Carregando comentários do AsyncStorage devido ao erro da API');
+      await loadCommentsFromStorage();
+    }
+  };
+
+  const saveCommentsToStorage = async (comments: any[]) => {
+    try {
+      const key = `comments_${postId}`;
+      await AsyncStorage.setItem(key, JSON.stringify(comments));
+      console.log('Comentários salvos no AsyncStorage');
+    } catch (error) {
+      console.error('Erro ao salvar comentários no AsyncStorage:', error);
+    }
+  };
+
+  const loadCommentsFromStorage = async () => {
+    try {
+      const key = `comments_${postId}`;
+      const storedComments = await AsyncStorage.getItem(key);
+      if (storedComments) {
+        const comments = JSON.parse(storedComments);
+        setComments(comments);
+        console.log('Comentários carregados do AsyncStorage:', comments.length);
+      } else {
+        setComments([]);
+        console.log('Nenhum comentário encontrado no AsyncStorage');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar comentários do AsyncStorage:', error);
+      setComments([]);
     }
   };
 
@@ -355,20 +456,81 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
     }
   };
 
-  const handleSendComment = () => {
-    if (newComment.trim() && post) {
-      const comment = {
-        id: Date.now().toString(),
-        author: {
-          name: 'Você',
-          username: '@usuario'
-        },
-        content: newComment.trim(),
-        createdAt: new Date().toISOString()
-      };
+  const handleSendComment = async () => {
+    if (!newComment.trim() || !post) return;
+
+    try {
+      console.log('PostDetailScreen - Criando comentário...');
+      const response = await apiService.createComment(post.id, {
+        content: newComment.trim()
+      });
+      console.log('PostDetailScreen - Comentário criado:', response);
       
-      setComments(prev => [...prev, comment]);
+      // A API retorna o comentário dentro de response.data
+      const newCommentData = (response as any)?.data || response;
+      
+      // Adicionar o novo comentário à lista
+      setComments(prev => {
+        const newComments = [...prev, newCommentData];
+        // Salvar no AsyncStorage
+        saveCommentsToStorage(newComments);
+        return newComments;
+      });
       setNewComment('');
+      
+      // Desfocar o input automaticamente após enviar o comentário
+      inputRef.current?.blur();
+      setIsInputFocused(false);
+    } catch (error) {
+      console.error('Erro ao criar comentário:', error);
+      // Aqui você pode adicionar um alert ou toast para mostrar o erro
+    }
+  };
+
+  const handleEditPost = () => {
+    if (post) {
+      console.log('Editando post:', post.id);
+      setShowPostMenu(false);
+      navigation.navigate('CreatePost' as any, { 
+        editMode: true, 
+        postId: post.id, 
+        postData: {
+          title: post.title,
+          content: post.content,
+          tags: post.tags || []
+        }
+      });
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (post) {
+      try {
+        console.log('Deletando post:', post.id);
+        await apiService.deletePost(post.id);
+        console.log('Post deletado com sucesso');
+        setShowPostMenu(false);
+        navigation.goBack();
+      } catch (error) {
+        console.error('Erro ao deletar post:', error);
+      }
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      console.log('Deletando comentário:', commentId);
+      await apiService.deleteComment(post.id, commentId);
+      console.log('Comentário deletado com sucesso');
+      setComments(prev => {
+        const newComments = prev.filter(comment => comment.id !== commentId);
+        // Salvar no AsyncStorage
+        saveCommentsToStorage(newComments);
+        return newComments;
+      });
+      setShowCommentMenu(null);
+    } catch (error) {
+      console.error('Erro ao deletar comentário:', error);
     }
   };
 
@@ -455,22 +617,32 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
         >
           <PostSection>
             <AuthorSection>
-              <ProfileImage>
-                <ProfileImageText>
-                  {post.author.name.charAt(0).toUpperCase()}
-                </ProfileImageText>
-              </ProfileImage>
-              <AuthorInfo>
-                <AuthorName>{post.author.name}</AuthorName>
-                <AuthorUsername>@{post.author.name.toLowerCase().replace(/\s+/g, '')}</AuthorUsername>
-              </AuthorInfo>
-              <FavoriteButton onPress={handleFavorite}>
-                <Ionicons 
-                  name={isFavorite(post.id) ? "star" : "star-outline"} 
-                  size={24} 
-                  color={isFavorite(post.id) ? "#FFD700" : "#8E8E93"} 
-                />
-              </FavoriteButton>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <ProfileImage>
+                  <ProfileImageText>
+                    {post.author.nome.charAt(0).toUpperCase()}
+                  </ProfileImageText>
+                </ProfileImage>
+                <AuthorInfo>
+                  <AuthorName>{post.author.nome}</AuthorName>
+                  <AuthorUsername>@{post.author.nome.toLowerCase().replace(/\s+/g, '')}</AuthorUsername>
+                </AuthorInfo>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <FavoriteButton onPress={handleFavorite}>
+                  <Ionicons 
+                    name={isFavorite(post.id) ? "star" : "star-outline"} 
+                    size={24} 
+                    color={isFavorite(post.id) ? "#FFD700" : "#8E8E93"} 
+                  />
+                </FavoriteButton>
+                {/* Menu de 3 pontos - só aparece se o usuário for o autor */}
+                {user && post?.author?.id === user?.id && (
+                  <MenuButton onPress={() => setShowPostMenu(!showPostMenu)}>
+                    <Ionicons name="ellipsis-vertical" size={24} color="#8E8E93" />
+                  </MenuButton>
+                )}
+              </View>
             </AuthorSection>
             <PostTitle>{post.title}</PostTitle>
             <PostContent>{post.content}</PostContent>
@@ -482,32 +654,82 @@ export const PostDetailScreen: React.FC<PostDetailScreenProps> = ({ navigation, 
               <CommentsTitle>Comentários</CommentsTitle>
               <CommentsTitleLineBottom />
             </CommentsTitleContainer>
-            {comments.map((comment, index) => (
+            {comments.map((comment, index) => {
+              console.log('PostDetailScreen - Renderizando comentário:', comment.id);
+              console.log('PostDetailScreen - User atual:', user);
+              console.log('PostDetailScreen - Comment user:', comment.user);
+              console.log('PostDetailScreen - Comment user.id:', comment.user?.id);
+              console.log('PostDetailScreen - User ID:', user?.id);
+              console.log('PostDetailScreen - Condição para mostrar menu:', user && comment.user?.id === user.id);
+              
+              return (
               <View key={comment.id}>
                 <CommentItem>
                   <CommentHeader>
-                    <CommentProfileImage>
-                      <CommentProfileImageText>
-                        {comment.author.name.charAt(0).toUpperCase()}
-                      </CommentProfileImageText>
-                    </CommentProfileImage>
-                    <CommentAuthorName>{comment.author.name}</CommentAuthorName>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                      <CommentProfileImage>
+                        <CommentProfileImageText>
+                          {comment.user?.nome?.charAt(0)?.toUpperCase() || '?'}
+                        </CommentProfileImageText>
+                      </CommentProfileImage>
+                      <CommentAuthorName>{comment.user?.nome || 'Usuário'}</CommentAuthorName>
+                    </View>
+                    {/* Menu de 3 pontos para comentários - só aparece se o usuário for o autor */}
+                    {user && comment.user?.id === user.id && (
+                      <MenuButton onPress={() => {
+                        console.log('PostDetailScreen - Clicou no menu do comentário:', comment.id);
+                        console.log('PostDetailScreen - User ID:', user?.id);
+                        console.log('PostDetailScreen - Comment user.id:', comment.user?.id);
+                        console.log('PostDetailScreen - São iguais:', user?.id === comment.user?.id);
+                        setShowCommentMenu(showCommentMenu === comment.id ? null : comment.id);
+                      }}>
+                        <Ionicons name="ellipsis-vertical" size={20} color="#8E8E93" />
+                      </MenuButton>
+                    )}
                   </CommentHeader>
                   <CommentTextContainer>
                     <CommentText>{comment.content}</CommentText>
                   </CommentTextContainer>
                 </CommentItem>
                 <CommentSeparator />
+                
+                {/* Menu dropdown para comentários */}
+                {showCommentMenu === comment.id && (
+                  <>
+                    <MenuOverlay onPress={() => setShowCommentMenu(null)} />
+                    <MenuContainer style={{ top: 80, right: 20 }}>
+                      <MenuItem onPress={() => handleDeleteComment(comment.id)}>
+                        <MenuItemTextDanger>Deletar</MenuItemTextDanger>
+                      </MenuItem>
+                    </MenuContainer>
+                  </>
+                )}
               </View>
-            ))}
+              );
+            })}
           </CommentsSection>
         </ScrollView>
+
+        {/* Menu dropdown para posts */}
+        {showPostMenu && (
+          <>
+            <MenuOverlay onPress={() => setShowPostMenu(false)} />
+            <MenuContainer>
+              <MenuItem onPress={handleEditPost}>
+                <MenuItemText>Editar</MenuItemText>
+              </MenuItem>
+              <MenuItem onPress={handleDeletePost}>
+                <MenuItemTextDanger>Deletar</MenuItemTextDanger>
+              </MenuItem>
+            </MenuContainer>
+          </>
+        )}
 
         <CommentInputSection
           style={{
             bottom: inputPositionAnimation.interpolate({
               inputRange: [0, 1],
-              outputRange: [0, Platform.OS === 'ios' ? 380 : 330],
+              outputRange: [Platform.OS === 'ios' ? 0 : 40, Platform.OS === 'ios' ? 380 : 330],
             }),
           }}
         >
