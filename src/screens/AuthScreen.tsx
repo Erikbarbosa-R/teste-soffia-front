@@ -7,9 +7,7 @@ import { CustomButton } from '../components';
 import { Loading } from '../components';
 import { useForm } from '../hooks';
 import { validateEmail, validatePassword } from '../utils';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../types';
-import { loginUser, registerUser, clearAuthError } from '../store/slices';
+import { useAuthContext } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 
 // Componentes styled específicos para o design das imagens
@@ -72,35 +70,37 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
   const [isLogin, setIsLogin] = useState(true);
-  const dispatch = useDispatch();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { login, register, isLoading } = useAuthContext();
 
   const { values, errors, setValue, setFieldTouched, isValid, reset } = useForm({
-    name: '',
+    nome: '',
     email: '',
     password: '',
   });
 
-  const handleSubmit = () => {
-    // Usuário e senha específicos para login
-    if (isLogin) {
-      dispatch(loginUser({
-        email: values.email || 'usuario@teste.com',
-        password: values.password || 'senha123',
-      }));
-    } else {
-      dispatch(registerUser({
-        name: values.name || 'Usuário Teste',
-        email: values.email || 'usuario@teste.com',
-        password: values.password || 'senha123',
-      }));
+  const handleSubmit = async () => {
+    try {
+      if (isLogin) {
+        await login(
+          values.email,
+          values.password
+        );
+      } else {
+        await register({
+          nome: values.nome,
+          email: values.email,
+          password: values.password,
+        });
+      }
+    } catch (error) {
+      console.error('Erro na autenticação:', error);
+      // Aqui você pode mostrar um alerta ou toast com o erro
     }
   };
 
   const handleToggleMode = () => {
     setIsLogin(!isLogin);
     reset();
-    dispatch(clearAuthError());
   };
 
   if (isLoading) {
@@ -115,12 +115,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
         <LoginContainer>
           <LoginTitle>LOGIN</LoginTitle>
           
-          {error && (
-            <Text style={{ color: '#FF3B30', marginBottom: 16, textAlign: 'center' }}>
-              {error}
-            </Text>
-          )}
-
           <CustomInput
             label="E-mail"
             placeholder="Endereço de e-mail"
@@ -170,19 +164,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ navigation }) => {
         </RegisterHeader>
 
         <RegisterContent>
-          {error && (
-            <Text style={{ color: '#FF3B30', marginBottom: 16, textAlign: 'center' }}>
-              {error}
-            </Text>
-          )}
-
           <CustomInput
             label="Nome de usuário"
             placeholder="Nome de usuário"
-            value={values.name}
-            onChangeText={(text) => setValue('name', text)}
-            error={errors.name}
-            onBlur={() => setFieldTouched('name')}
+            value={values.nome}
+            onChangeText={(text) => setValue('nome', text)}
+            error={errors.nome}
+            onBlur={() => setFieldTouched('nome')}
           />
 
           <CustomInput
